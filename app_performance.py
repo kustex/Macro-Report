@@ -11,7 +11,7 @@ extension = 'csv'
 files = os.listdir('tickers')
 files = [i[:-4] for i in files]
 
-corr_tickers = pd.read_csv('~/Documents/Repos/risk_ranges/dashboard_streamlit/tickers_corr/correlations.csv')
+corr_tickers = pd.read_csv('../tickers_corr/correlations.csv')
 corr_tickers = list(corr_tickers['Ticker'])
 
 
