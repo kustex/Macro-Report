@@ -11,7 +11,7 @@ extension = 'csv'
 files = os.listdir('tickers')
 files = [i[:-4] for i in files]
 
-corr_tickers = pd.read_csv('../tickers_corr/correlations.csv')
+corr_tickers = pd.read_csv('/tickers_corr/correlations.csv')
 corr_tickers = list(corr_tickers['Ticker'])
 
 
@@ -51,7 +51,7 @@ app.layout = html.Div([
     Input(component_id='ticker_dropdown', component_property='value')
 )
 def dropdown_filename(value):
-    df, ticker_list = ap.get_df_all_data('../tickers/{}.csv'.format(value))
+    df, ticker_list = ap.get_df_all_data('/tickers/{}.csv'.format(value))
     df_performance = ap.get_performance(df)
     return dbc.Table.from_dataframe(
         df_performance.round(2),
@@ -62,7 +62,7 @@ def dropdown_filename(value):
     Input(component_id='ticker_dropdown_correlations', component_property='value')
 )
 def dropdown_filename(value):
-    df, ticker_list = ap.get_df_all_data('../tickers_corr/correlations.csv')
+    df, ticker_list = ap.get_df_all_data('/tickers_corr/correlations.csv')
     df_correlation, dataframe = ap.get_correlation_table_window_x(df, value)
     return dbc.Table.from_dataframe(
         df_correlation,
