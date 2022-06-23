@@ -187,8 +187,8 @@ class app_performance:
 
     def get_lengths_periods(self):
         end_dt = date.today()
-        start_dt_ytd = date(2022, 1, 1)
-        start_dt_qtd = date(2021, 6, 30)
+        start_dt_ytd = date(2021, 12, 31)
+        start_dt_qtd = date(2022, 3, 30)
         start_dt_3m = end_dt - timedelta(weeks=12)
         start_dt_mtd = end_dt.replace(day=1)
         start_dt_week = end_dt - timedelta(weeks=1)
