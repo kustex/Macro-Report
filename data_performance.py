@@ -122,8 +122,8 @@ class app_performance:
         len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd = self.get_lengths_periods()
         for ticker in tickerlist:
             data_perf = data[ticker]
-            latest = data_perf[-2]
-            range = [3, len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd]
+            latest = data_perf[-1]
+            range = [2, len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd]
             results = []
             for time in range:
                 if data_perf[-time] < latest:
@@ -137,7 +137,7 @@ class app_performance:
             results.append(vs_52_max)
             results.append(vs_52_min)
             results = ["{:.2%}".format(y) for y in results]
-            results.insert(0, data_perf[-2].round(2))
+            results.insert(0, data_perf[-1].round(2))
             df[ticker] = results
         df = df.T.reset_index()
         df.columns = window_names
@@ -185,8 +185,17 @@ class app_performance:
         date_list = pd.Series(pd.bdate_range(start_date, end_date))
         return date_list
 
+    def get_yesterday(self):
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+        if today.weekday() == 6:
+            yesterday = date.today() - timedelta(days=2)
+        elif today.weekday() == 0:
+            yesterday = date.today() - timedelta(days=3)
+        return yesterday
+
     def get_lengths_periods(self):
-        end_dt = date.today()
+        end_dt = self.get_yesterday()
         start_dt_ytd = date(2021, 12, 31)
         start_dt_qtd = date(2022, 3, 30)
         start_dt_3m = end_dt - timedelta(weeks=12)
