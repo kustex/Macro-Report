@@ -1,5 +1,6 @@
 import time
 import pandas as pd
+import pandas_datareader as pdr
 import numpy as np
 import os
 import glob
@@ -9,6 +10,8 @@ import itertools
 import datetime
 import re
 import random
+import pyEX as px
+import plotly.graph_objects as go
 
 from datetime import timedelta, date
 from itertools import chain
@@ -112,6 +115,15 @@ class app_performance:
             df = df.join(dataframe)
         return df.interpolate(), tickers
 
+    def get_df_all_data_iex(self, filename):
+        token = os.environ.get('IEX_TOKEN')
+        stocks, cash, index, futures, contract_ids, tickers = self.getTickerlists(filename)
+        df = pd.DataFrame()
+        for ticker in tickers:
+            df[ticker] = px.chartDF(ticker, timeframe= '1y', token=token).close
+        # print(df[::-1])
+        return df[::-1], tickers
+
     def get_performance(self, data):
         data = data
         tickerlist = list(data.columns)
@@ -178,6 +190,74 @@ class app_performance:
         data = data[cols]
         return data.round(2), dataframe
 
+    def df_rates_spreads(self):
+        names = ['2Y-10Y Spread', '5Y Breakeven', 'HY-OAS', 'IG Spread', 'High Yield', '3M t-bill', '2Y t-note', '5Y t-note', '10Y t-note', '30Y t-note']
+        tickers = ['T5YIE', 'BAMLH0A0HYM2', 'BAMLC0A4CBBB', 'BAMLH0A0HYM2EY', 'DTB3', 'DGS2', 'DGS5', 'DGS10', 'DGS30']
+        df = pdr.get_data_fred('T10Y2Y')
+        for tick, name in zip(tickers, names):
+            df[tick] = pdr.get_data_fred(tick)
+        df.columns = names
+        return df.dropna()
+
+    def df_performance_rates_spreads(self):
+        dataframe = self.df_rates_spreads()
+        # print(dataframe)
+        window_names = ['Ticker', 'Price', '1D', '1W', '1M', '3M', 'vs 52w max', 'vs 52w min', 'vs 3Y ave', 'vs 5Y ave']
+        df = pd.DataFrame()
+        ticker_list = ['2Y-10Y Spread', '5Y Breakeven', 'HY-OAS', 'IG Spread', 'High Yield', '3M t-bill', '2Y t-note', '5Y t-note', '10Y t-note', '30Y t-note']
+        len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd = self.get_lengths_periods()
+        for ticker in ticker_list:
+            data = dataframe.loc[:, ticker]
+            latest = data[-1]
+            range = [2, len_week, len_1m, len_3m]
+            results = []
+            for time in range:
+                if data[-time] < latest:
+                    results.append(latest - data[-time])
+                else:
+                    results.append(-(data[-time] - latest))
+            yearly_high = data[-252:].max()
+            yearly_low = data[-252:].min()
+            y3_ave = data[-756:].sum()/756
+            y5_ave = data[-1260:].sum()/1260
+            vs_52_max = -(yearly_high - latest)
+            vs_52_min = (latest - yearly_low)
+
+            if y3_ave < latest:
+                vs_y3_ave = (latest - y3_ave)
+            else:
+                vs_y3_ave = (-y3_ave - latest)
+
+            if y5_ave < latest:
+                vs_y5_ave = (latest - y5_ave)
+            else:
+                vs_y5_ave = (-y5_ave - latest)
+            results_vs = [vs_52_max, vs_52_min, vs_y3_ave, vs_y5_ave]
+            for i in results_vs:
+                results.append(i)
+            results = ["{0:.1f}".format(y*100) for y in results]
+            results.insert(0, data[-1].round(2))
+            df[ticker] = results
+        df = df.T.reset_index()
+        df.columns = window_names
+        return df
+
+    def chart_rates_spreads(self, data, TICKER):
+        x = data.index
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x, y=np.array(data), name=TICKER))
+        fig.update_xaxes(title='date')
+        fig.update_yaxes(title='performance')
+        fig.update_layout(
+            title={
+                'text': f"{TICKER} performance",
+                'y': 0.9,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'}
+        )
+        return fig
+
     def getDaterange(self, numdays):
         end_date = datetime.datetime.today()
         delta = datetime.timedelta(days=numdays)
@@ -197,9 +277,9 @@ class app_performance:
     def get_lengths_periods(self):
         end_dt = self.get_yesterday()
         start_dt_ytd = date(2021, 12, 31)
-        start_dt_qtd = date(2022, 3, 30)
+        start_dt_qtd = date(2022, 6, 30)
         start_dt_3m = end_dt - timedelta(weeks=12)
-        start_dt_mtd = end_dt.replace(day=1)
+        start_dt_mtd = end_dt.replace(day=1) - timedelta(days=1)
         start_dt_week = end_dt - timedelta(weeks=1)
         start_dt_3week = end_dt - timedelta(weeks=3)
         start_dt_4week = end_dt - timedelta(weeks=4)
@@ -233,3 +313,6 @@ class app_performance:
             yield date1 + timedelta(n)
 
 
+# ap = app_performance()
+# df = ap.get_df_all_data_iex('tickers/sectors.csv')
+# print(df)
