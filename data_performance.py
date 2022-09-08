@@ -9,9 +9,12 @@ import itertools
 import datetime
 import re
 import random
+import pandas_datareader as pdr
+import plotly.graph_objects as go
 
 from datetime import timedelta, date
 from itertools import chain
+
 
 
 class app_performance:
@@ -72,12 +75,12 @@ class app_performance:
 
     async def req_historical_data_async_adjusted_last(self, contract):
         hist_data = await self.ib.reqHistoricalDataAsync(contract, '', barSizeSetting='1 day', durationStr='1 Y',
-                                                         whatToShow='ADJUSTED_LAST', useRTH=False)
+                                                         whatToShow='ADJUSTED_LAST', useRTH=True)
         return hist_data
 
     async def req_historical_data_async_midpoint(self, contract):
         hist_data = await self.ib.reqHistoricalDataAsync(contract, '', barSizeSetting='1 day', durationStr='1 Y',
-                                                         whatToShow='MIDPOINT', useRTH=False)
+                                                         whatToShow='MIDPOINT', useRTH=True)
         return hist_data
 
     async def getHistoricaldata(self, filename):
@@ -114,6 +117,8 @@ class app_performance:
 
     def get_performance(self, data):
         data = data
+        last_date = data.index[-1]
+        print(last_date)
         tickerlist = list(data.columns)
         tickerlist = " ".join(tickerlist)
         tickerlist = tickerlist.split()
@@ -122,8 +127,8 @@ class app_performance:
         len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd = self.get_lengths_periods()
         for ticker in tickerlist:
             data_perf = data[ticker]
-            latest = data_perf[-1]
-            range = [2, len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd]
+            latest = data_perf[-2]
+            range = [3, len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd]
             results = []
             for time in range:
                 if data_perf[-time] < latest:
@@ -137,7 +142,7 @@ class app_performance:
             results.append(vs_52_max)
             results.append(vs_52_min)
             results = ["{:.2%}".format(y) for y in results]
-            results.insert(0, data_perf[-1].round(2))
+            results.insert(0, data_perf[-2].round(2))
             df[ticker] = results
         df = df.T.reset_index()
         df.columns = window_names
@@ -194,10 +199,65 @@ class app_performance:
             yesterday = date.today() - timedelta(days=3)
         return yesterday
 
+    def df_performance_rates_spreads(self):
+        window_names = ['Ticker', 'Price', '1D', '1W', '1M', '3M', 'vs 52w max', 'vs 52w min', 'vs 3Y ave', 'vs 5Y ave']
+        dataframe = pd.DataFrame()
+        df = pd.DataFrame()
+        tickers = ['T10Y2Y', 'T5YIE', 'BAMLH0A0HYM2', 'BAMLC0A4CBBB', 'BAMLH0A0HYM2EY', 'DTB3', 'DGS2', 'DGS5', 'DGS10', 'DGS30']
+        names = ['2Y-10Y Spread', '5Y Breakeven', 'HY-OAS', 'IG Spread', 'High Yield', '3M t-bill', '2Y t-note', '5Y t-note', '10Y t-note', '30Y t-note']
+        len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd = self.get_lengths_periods()
+        for ticker, name, in zip(tickers, names):
+            dtf = pdr.get_data_fred(ticker)
+            df = df.join(dtf)
+            print(df)
+            data = df[name]
+            latest = data[-1]
+            range = [2, len_week, len_1m, len_3m]
+            results = []
+            for time in range:
+                if data[-time] < latest:
+                    results.append((latest - data[-time]))
+                else:
+                    results.append(-(data[-time] - latest))
+            yearly_high = data[-252:].max()
+            yearly_low = data[-252:].min()
+            y3_ave = data[-756:].sum()/756
+            y5_ave = data[-1260:].sum()/1260
+            vs_52_max = ((latest - yearly_high) / latest)
+            vs_52_min = ((latest - yearly_low) / latest)
+            vs_y3_ave = ((latest - y3_ave) / latest)
+            vs_y5_ave = ((latest - y5_ave) / latest)
+            results_vs = [vs_52_max, vs_52_min, vs_y3_ave, vs_y5_ave]
+            for i in results_vs:
+                results.append(i)
+            results = ["{0:.1f}".format(y*100) for y in results]
+            results.insert(0, data[-1].round(2))
+            dataframe[name] = results
+        dataframe = df.T.reset_index()
+        dataframe.columns = window_names
+        # print(dataframe)
+        return dataframe
+
+    def chart_rates_spreads(self, data, TICKER):
+        x = data.index
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=x, y=np.array(data), name=TICKER))
+        fig.update_xaxes(title='date')
+        fig.update_yaxes(title='performance')
+        fig.update_layout(
+            title={
+                'text': f"{TICKER} performance",
+                'y': 0.9,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'}
+        )
+        return fig
+
     def get_lengths_periods(self):
         end_dt = self.get_yesterday()
         start_dt_ytd = date(2021, 12, 31)
-        start_dt_qtd = date(2022, 3, 30)
+        start_dt_qtd = date(2022, 6, 30)
         start_dt_3m = end_dt - timedelta(weeks=12)
         start_dt_mtd = end_dt.replace(day=1)
         start_dt_week = end_dt - timedelta(weeks=1)
