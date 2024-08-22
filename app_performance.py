@@ -1,20 +1,21 @@
 import dash_bootstrap_components as dbc
 import os
-import re
 import pandas as pd
-
 from dash import Dash, html, dcc
 from dash.dependencies import Input, Output, State
 from data_performance import app_performance
 
+ap = app_performance()
+
+# Define lists for dropdown options
 extension = 'csv'
 files = os.listdir('tickers')
 files = sorted([i[:-4] for i in files])
-corr_tickers = pd.read_csv('tickers_corr/correlations.csv')
-corr_tickers = list(corr_tickers['Ticker'])
+corr_tickers = pd.read_csv('tickers_corr/correlations.csv')['Ticker'].tolist()
 
-
-ap = app_performance()
+rates_spreads_tickers = ['2Y-10Y Spread', '5Y Breakeven', 'HY-OAS', 'IG Spread', 'High Yield', '3M t-bill', '2Y t-note', '5Y t-note', '10Y t-note', '30Y t-note']
+timeframes = ['1Y', '5Y', '10Y', 'MAX']
+data = ap.df_rates_spreads()
 
 # Initialize the app with suppress_callback_exceptions=True
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
@@ -25,11 +26,11 @@ sidebar = html.Div(
     [
         html.H2("Macro Report", className="display-4"),
         html.Hr(),
-        #html.P("Navigation", className="lead"),
         dbc.Nav(
             [
                 dbc.NavLink("Performance", href="/performance", id="performance-link", active="exact"),
                 dbc.NavLink("Correlations", href="/correlations", id="correlations-link", active="exact"),
+                dbc.NavLink("Risk Metrics", href="/risk-metrics", id="risk-metrics-link", active="exact"),
             ],
             vertical=True,
             pills=True,
@@ -56,6 +57,66 @@ app.layout = html.Div([
     content
 ])
 
+# Define the layouts for each page
+performance_layout = html.Div([
+    html.Br(),
+    html.H2(children='Performance', style={'textAlign': 'center'}),
+    html.Br(),
+    dbc.Row([
+        dbc.Col([
+            dcc.Dropdown(
+                options=[{'label': x, 'value': x} for x in files],
+                value='sectors',
+                id='ticker_dropdown'
+            ),
+            html.Br(),
+            html.Div(id='dd_output_container')
+        ], width={"size": 6, "offset": 3}),
+    ]),
+])
+
+correlations_layout = html.Div([
+    html.Br(),
+    html.H2(children='Correlations', style={'textAlign': 'center'}),
+    html.Br(),
+    dbc.Row([
+        dbc.Col([
+            dcc.Dropdown(
+                options=[{'label': x, 'value': x} for x in corr_tickers],
+                value='UUP',
+                id='ticker_dropdown_correlations'
+            ),
+            html.Br(),
+            html.Div(id='dd_output_container_correlations')
+        ], width={"size": 6, "offset": 3}),
+    ]),
+])
+
+risk_metrics_layout = html.Div([
+    dbc.Container([
+        dbc.Row([
+            dbc.Col([
+                html.H2('Rates and Spreads', style={'textAlign': 'center'}),
+                html.Br(),
+                dbc.Row([
+                    dbc.Col([
+                        dcc.Dropdown(
+                            id='input_rates_spreads',
+                            options=[{'label': x, 'value': x} for x in rates_spreads_tickers],
+                            value='2Y-10Y Spread'
+                        ),
+                        html.Br(),
+                        dbc.Button('Submit ticker(s)', id='submit_rates_spreads')
+                    ]),
+                ]),
+                html.Br(),
+                dcc.Graph(id='chart_rates_spreads'),
+                html.Div(id='rates_spreads_performance')
+            ])
+        ])
+    ])
+])
+
 # Callback to control page navigation
 @app.callback(
     Output('page-content', 'children'),
@@ -63,66 +124,62 @@ app.layout = html.Div([
 )
 def display_page(pathname):
     if pathname == '/correlations':
-        return html.Div([
-            html.Br(),
-            html.H2(children='Correlations', style={'textAlign': 'center'}),
-            html.Br(),
-            dbc.Row([
-                dbc.Col([
-                    dcc.Dropdown(options=corr_tickers,
-                                 value='UUP',
-                                 id='ticker_dropdown_correlations'),
-                    html.Br(),
-                    html.Div(id='dd_output_container_correlations')
-                ], width={"size": 6, "offset": 3}),
-            ]),
-        ])
+        return correlations_layout
+    elif pathname == '/risk-metrics':
+        return risk_metrics_layout
     else:
-        return html.Div([
-            html.Br(),
-            html.H2(children='Performance', style={'textAlign': 'center'}),
-            html.Br(),
-            dbc.Row([
-                dbc.Col([
-                    dcc.Dropdown(options=files,
-                                 value='sectors',
-                                 id='ticker_dropdown'),
-                    html.Br(),
-                    html.Div(id='dd_output_container')
-                ], width={"size": 6, "offset": 3}),
-            ]),
-        ])  # Default page is Performance
+        return performance_layout  # Default page is Performance
 
-# Original callbacks
+# Callback for Performance
 @app.callback(
-    Output(component_id='dd_output_container', component_property='children'),
-    Input(component_id='ticker_dropdown', component_property='value')
+    Output('dd_output_container', 'children'),
+    [Input('ticker_dropdown', 'value')]
 )
 def update_performance(value):
     df, ticker_list = ap.get_df_all_data(f'tickers/{value}.csv')
     df_performance = ap.get_performance(df)
     return dbc.Table.from_dataframe(df_performance.round(2), bordered=True)
 
+# Callback for Correlations
 @app.callback(
-    Output(component_id='dd_output_container_correlations', component_property='children'),
-    Input(component_id='ticker_dropdown_correlations', component_property='value')
+    Output('dd_output_container_correlations', 'children'),
+    [Input('ticker_dropdown_correlations', 'value')]
 )
 def update_correlations(value):
     df, ticker_list = ap.get_df_all_data('tickers_corr/correlations.csv')
     df_correlation, dataframe = ap.get_correlation_table_window_x(df, value)
     return dbc.Table.from_dataframe(df_correlation, bordered=True)
 
+# Callbacks for Risk Metrics
+@app.callback(
+    Output('chart_rates_spreads', 'figure'),
+    [Input('submit_rates_spreads', 'n_clicks')],
+    [State('input_rates_spreads', 'value')]
+)
+def chart_rates_spreads(n_clicks, TICKER):
+    df = data.loc[:, TICKER]
+    fig = ap.chart_rates_spreads(df, TICKER)
+    return fig
+
+@app.callback(
+    Output('rates_spreads_performance', 'children'),
+    [Input('input_rates_spreads', 'value')]
+)
+def update_rates_spreads_performance(TICKER):
+    data = ap.df_performance_rates_spreads()
+    return dbc.Table.from_dataframe(data.round(2), bordered=True)
+
 # Highlight the active link
 @app.callback(
-    [Output(f"{link}-link", "active") for link in ["performance", "correlations"]],
+    [Output(f"{link}-link", "active") for link in ["performance", "correlations", "risk-metrics"]],
     [Input("url", "pathname")]
 )
 def toggle_active_links(pathname):
-    return [pathname == f"/{link}" for link in ["performance", "correlations"]]
+    return [pathname == f"/{link}" for link in ["performance", "correlations", "risk-metrics"]]
 
+# Run the server
 if __name__ == '__main__':
     app.run_server(debug=True)
-
 
 
 

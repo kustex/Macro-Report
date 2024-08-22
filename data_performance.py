@@ -244,18 +244,18 @@ class app_performance:
         len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd = self.get_lengths_periods()
         for ticker in ticker_list:
             data = dataframe.loc[:, ticker]
-            latest = data[-1]
+            latest = data.iloc[-1]
             range = [2, len_week, len_1m, len_3m]
             results = []
             for time in range:
-                if data[-time] < latest:
-                    results.append(latest - data[-time])
+                if data.iloc[-time] < latest:
+                    results.append(latest - data.iloc[-time])
                 else:
-                    results.append(-(data[-time] - latest))
-            yearly_high = data[-252:].max()
-            yearly_low = data[-252:].min()
-            y3_ave = data[-756:].sum()/756
-            y5_ave = data[-1260:].sum()/1260
+                    results.append(-(data.iloc[-time] - latest))
+            yearly_high = data.iloc[-252:].max()
+            yearly_low = data.iloc[-252:].min()
+            y3_ave = data.iloc[-756:].sum()/756
+            y5_ave = data.iloc[-1260:].sum()/1260
             vs_52_max = -(yearly_high - latest)
             vs_52_min = (latest - yearly_low)
 
@@ -272,7 +272,7 @@ class app_performance:
             for i in results_vs:
                 results.append(i)
             results = ["{0:.1f}".format(y*100) for y in results]
-            results.insert(0, data[-1].round(2))
+            results.insert(0, data.iloc[-2].round(2))
             df[ticker] = results
         df = df.T.reset_index()
         df.columns = window_names
