@@ -1,4 +1,4 @@
-Ticker,Type,Exchange,Expiration,Multiplier,Base Currency,Symbol,Quote Currency,Conid
+Ticker,Type,Exchange,Expiration,Multiplier,Base_Currency,Symbol,Quote Currency,Conid
 KRWUSD,CASH,IDEALPRO,,,KRW,,USD,27717934
 EURGBP,CASH,IDEALPRO,,,EUR,,GBP,12087807
 USDCAD,CASH,IDEALPRO,,,USD,,CAD,15016062

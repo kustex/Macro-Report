@@ -1,0 +1,8 @@
+dash==2.17.1
+dash_bootstrap_components==1.6.0
+ib_insync==0.9.86
+numpy==2.1.0
+pandas==2.2.2
+pandas_datareader==0.10.0
+plotly==5.23.0
+pyEX==0.5.0
