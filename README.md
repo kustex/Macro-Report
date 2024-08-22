@@ -1,0 +1,59 @@
+# Macro Report App
+
+## Overview
+
+The **Macro Report App** provides a daily overview of changes in macro financial markets across different time horizons. It tracks performance metrics and analyzes correlations between major asset classes. This tool is ideal for financial analysts, investors, and anyone interested in macroeconomic trends.
+
+### Key Features:
+- **Performance Monitoring**: Track the performance of various sectors, industries, and macroeconomic indicators.
+- **Correlation Analysis**: Analyze changes in correlations between major asset classes over different time horizons.
+- **Daily Updates**: Data is updated daily for fresh insights.
+
+## Project Structure
+
+```plaintext
+Macro_Report_App/
+│
+├── app_performance.py        # Main Python script to run the app
+├── data_performance.py       # Script to establish connection with TWS API and retrieve data
+├── requirements.txt          # Python dependencies
+├── tickers/                  # Directory containing performance data files
+│   ├── sectors.csv           # Example data file for sectors
+│   ├── industry.csv          # Example data file for industry
+│   └── macro.csv             # Example data file for macro indicators
+│
+├── tickers_corr/             # Directory containing correlation data files
+│   └── correlations.csv      # Data file for correlations
+│
+└── README.md                 # This README file
+```
+
+## Installation
+
+### 1. Clone the Repository
+
+Clone the repository to your local machine:
+
+```bash
+git clone https://github.com/yourusername/Macro_Report_App.git
+cd Macro_Report_App
+```
+
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Running the App
+1. Prepare Data Files: Ensure that the necessary data files (tickers/*.csv and tickers_corr/correlations.csv) are available and updated daily.
+2. Run the App: Execute the main Python script to start the app:
+```bash
+python app_performance.py
+```
+3. Access the App: Open your web browser and go to:
+```arduino
+http://127.0.0.1:8050/
+```
+
+
+
