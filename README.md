@@ -17,14 +17,8 @@ Macro_Report_App/
 ├── app_performance.py        # Main Python script to run the app
 ├── data_performance.py       # Script to establish connection with TWS API and retrieve data
 ├── requirements.txt          # Python dependencies
-├── tickers/                  # Directory containing performance data files
-│   ├── sectors.csv           # Example data file for sectors
-│   ├── industry.csv          # Example data file for industry
-│   └── macro.csv             # Example data file for macro indicators
-│
-├── tickers_corr/             # Directory containing correlation data files
-│   └── correlations.csv      # Data file for correlations
-│
+├── tickers/                  # Directory containing contact details for performance tickers grouped by sector in csv files
+├── tickers_corr/             # Directory containing contract details for correlation tickers in csv files
 └── README.md                 # This README file
 ```
 
