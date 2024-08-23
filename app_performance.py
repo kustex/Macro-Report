@@ -15,7 +15,6 @@ corr_tickers = pd.read_csv('tickers_corr/correlations.csv')['Ticker'].tolist()
 
 rates_spreads_tickers = ['2Y-10Y Spread', '5Y Breakeven', 'HY-OAS', 'IG Spread', 'High Yield', '3M t-bill', '2Y t-note', '5Y t-note', '10Y t-note', '30Y t-note']
 timeframes = ['1Y', '5Y', '10Y', 'MAX']
-data = ap.df_rates_spreads()
 
 # Initialize the app with suppress_callback_exceptions=True
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
@@ -92,10 +91,12 @@ correlations_layout = html.Div([
     ]),
 ])
 
+# Risk Metrics Layout
 risk_metrics_layout = html.Div([
     dbc.Container([
         dbc.Row([
             dbc.Col([
+                html.Br(),
                 html.H2('Rates and Spreads', style={'textAlign': 'center'}),
                 html.Br(),
                 dbc.Row([
@@ -105,9 +106,7 @@ risk_metrics_layout = html.Div([
                             options=[{'label': x, 'value': x} for x in rates_spreads_tickers],
                             value='2Y-10Y Spread'
                         ),
-                        html.Br(),
-                        dbc.Button('Submit ticker(s)', id='submit_rates_spreads')
-                    ]),
+                    ], width={"size": 6, "offset": 3}),
                 ]),
                 html.Br(),
                 dcc.Graph(id='chart_rates_spreads'),
@@ -116,6 +115,7 @@ risk_metrics_layout = html.Div([
         ])
     ])
 ])
+
 
 # Callback to control page navigation
 @app.callback(
@@ -150,14 +150,12 @@ def update_correlations(value):
     df_correlation, dataframe = ap.get_correlation_table_window_x(df, value)
     return dbc.Table.from_dataframe(df_correlation, bordered=True)
 
-# Callbacks for Risk Metrics
 @app.callback(
     Output('chart_rates_spreads', 'figure'),
-    [Input('submit_rates_spreads', 'n_clicks')],
-    [State('input_rates_spreads', 'value')]
+    [Input('input_rates_spreads', 'value')]
 )
-def chart_rates_spreads(n_clicks, TICKER):
-    df = data.loc[:, TICKER]
+def chart_rates_spreads(TICKER):
+    df = ap.df_rates_spreads().loc[:, TICKER]
     fig = ap.chart_rates_spreads(df, TICKER)
     return fig
 
@@ -176,6 +174,7 @@ def update_rates_spreads_performance(TICKER):
 )
 def toggle_active_links(pathname):
     return [pathname == f"/{link}" for link in ["performance", "correlations", "risk-metrics"]]
+
 
 # Run the server
 if __name__ == '__main__':
