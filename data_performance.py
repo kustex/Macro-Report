@@ -286,14 +286,6 @@ class app_performance:
         fig.add_trace(go.Scatter(x=x, y=np.array(data), name=TICKER))
         fig.update_xaxes(title='date')
         fig.update_yaxes(title='performance')
-        fig.update_layout(
-            title={
-                'text': f"{TICKER} performance",
-                'y': 0.9,
-                'x': 0.5,
-                'xanchor': 'center',
-                'yanchor': 'top'}
-        )
         return fig
 
     def getDaterange(self, numdays):
@@ -364,7 +356,8 @@ class app_performance:
             yield date1 + timedelta(n)
 
 
-#ap = app_performance()
-#df = ap.get_df_all_data('tickers_corr/correlations.csv')
+ap = app_performance()
+df = ap.get_df_all_data('tickers_corr/correlations.csv')
+print(df)
 #perf = ap.get_performance(df[0])
 #print(perf)

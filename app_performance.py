@@ -112,7 +112,7 @@ risk_metrics_layout = html.Div([
                 dcc.Graph(id='chart_rates_spreads'),
                 html.Div(id='rates_spreads_performance')
             ])
-        ])
+        ], justify='center')
     ])
 ])
 
