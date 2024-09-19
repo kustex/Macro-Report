@@ -26,7 +26,7 @@ Macro_Report_App/
 
 ### 1. Clone the Repository
 
-Clone the repository to your local machine:
+Clone the repository to your local machine & make it the current directory in terminal:
 
 ```bash
 git clone https://github.com/kustex/Macro_Report_App.git
