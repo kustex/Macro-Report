@@ -39,8 +39,9 @@ pip install -r requirements.txt
 ```
 
 ### 3. Running the App
-1. Prepare Data Files: Ensure that the necessary data files (tickers/*.csv and tickers_corr/correlations.csv) are available and updated daily.
-2. Run the App: Execute the main Python script to start the app:
+1. Prepare Data Files: Ensure that the necessary data files (tickers/*.csv and tickers_corr/correlations.csv) are available.
+2. Have an instance of Interactive Brokers' TWS running. Make sure you are subscribed to their data tier & change the socket port for establishing API connection to '7496' in Configure/API/Settings. 
+3. Run the App: Execute the main Python script to start the app:
 ```bash
 python app_performance.py
 ```
