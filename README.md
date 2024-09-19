@@ -33,19 +33,25 @@ git clone https://github.com/kustex/Macro_Report_App.git
 cd Macro_Report_App
 ```
 
-### 2. Install Dependencies
+### 3. Create & activate a virtual environment 
+```bash
+python -m venv venv
+source venv/bin/activate 
+```
+
+### 4. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Running the App
+### 5. Running the App
 1. Prepare Data Files: Ensure that the necessary data files (tickers/*.csv and tickers_corr/correlations.csv) are available.
 2. Have an instance of Interactive Brokers' TWS running. Make sure you are subscribed to their data tier & change the socket port for establishing API connection to '7496' in Configure/API/Settings. 
 3. Run the App: Execute the main Python script to start the app:
 ```bash
 python app_performance.py
 ```
-### 4. Access the App: Open your web browser and go to:
+### 6. Access the App: Open your web browser and go to:
 ```arduino
 http://127.0.0.1:8050/
 ```
