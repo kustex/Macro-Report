@@ -29,7 +29,7 @@ Macro_Report_App/
 Clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/yourusername/Macro_Report_App.git
+git clone https://github.com/kustex/Macro_Report_App.git
 cd Macro_Report_App
 ```
 
