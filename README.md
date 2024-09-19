@@ -45,7 +45,7 @@ pip install -r requirements.txt
 ```bash
 python app_performance.py
 ```
-3. Access the App: Open your web browser and go to:
+### 4. Access the App: Open your web browser and go to:
 ```arduino
 http://127.0.0.1:8050/
 ```
