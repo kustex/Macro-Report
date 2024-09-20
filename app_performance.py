@@ -1,6 +1,8 @@
 import dash_bootstrap_components as dbc
 import os
 import pandas as pd
+import plotly.graph_objects as go
+
 from dash import Dash, html, dcc
 from dash.dependencies import Input, Output, State
 from data_performance import app_performance
@@ -58,37 +60,29 @@ app.layout = html.Div([
 
 # Define the layouts for each page
 performance_layout = html.Div([
-    html.Br(),
-    html.H2(children='Performance', style={'textAlign': 'center'}),
-    html.Br(),
-    dbc.Row([
-        dbc.Col([
-            dcc.Dropdown(
-                options=[{'label': x, 'value': x} for x in files],
-                value='sectors',
-                id='ticker_dropdown'
-            ),
-            html.Br(),
-            html.Div(id='dd_output_container')
-        ], width={"size": 6, "offset": 3}),
-    ]),
-])
+    dbc.Container([
+        dbc.Row([
+            dbc.Col([
+                html.Br(),
+                html.H2(children='Performance', style={'textAlign': 'center'}),
+                html.Br(),
+                dbc.Row([
+                    dbc.Col([
+                        dcc.Dropdown(
+                            options=[{'label': x, 'value': x} for x in files],
+                            value='sectors',
+                            id='ticker_dropdown'
+                        ),
+                        html.Br(),
+                    ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}),
+                ]),
 
-correlations_layout = html.Div([
-    html.Br(),
-    html.H2(children='Correlations', style={'textAlign': 'center'}),
-    html.Br(),
-    dbc.Row([
-        dbc.Col([
-            dcc.Dropdown(
-                options=[{'label': x, 'value': x} for x in corr_tickers],
-                value='UUP',
-                id='ticker_dropdown_correlations'
-            ),
-            html.Br(),
-            html.Div(id='dd_output_container_correlations')
-        ], width={"size": 6, "offset": 3}),
-    ]),
+                dbc.Col([
+                    html.Div(id='dd_output_container')
+                ], style={'textAlign': 'center'})
+            ], align='center')
+        ])
+    ])
 ])
 
 # Risk Metrics Layout
@@ -106,15 +100,38 @@ risk_metrics_layout = html.Div([
                             options=[{'label': x, 'value': x} for x in rates_spreads_tickers],
                             value='2Y-10Y Spread'
                         ),
-                    ], width={"size": 6, "offset": 3}),
+                    ], style={'textAlign': 'center','marginLeft':'auto', 'marginRight': 'auto'}),
                 ]),
                 html.Br(),
                 dcc.Graph(id='chart_rates_spreads'),
                 html.Div(id='rates_spreads_performance')
             ])
-        ], justify='center')
+        ], align='center')
     ])
 ])
+
+correlations_layout = html.Div([
+    html.Br(),
+    html.H2(children='Correlations', style={'textAlign': 'center'}),
+    html.Br(),
+    dbc.Row([
+        dbc.Col([
+            dcc.Dropdown(
+                options=[{'label': x, 'value': x} for x in corr_tickers],
+                value='UUP',
+                id='ticker_dropdown_correlations'
+            ),
+            html.Br(),
+            html.Div(id='dd_output_container_correlations')
+        ], style={'textAlign': 'center','marginLeft':'auto', 'marginRight': 'auto'}, width={"size": 7}),
+    ]),
+    dbc.Row([
+        dbc.Col([
+            dcc.Graph(id='dd_output_container_correlation_graphs', style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}),
+        ])
+    ], align='center')
+])
+
 
 
 # Callback to control page navigation
@@ -140,16 +157,6 @@ def update_performance(value):
     df_performance = ap.get_performance(df)
     return dbc.Table.from_dataframe(df_performance.round(2), bordered=True)
 
-# Callback for Correlations
-@app.callback(
-    Output('dd_output_container_correlations', 'children'),
-    [Input('ticker_dropdown_correlations', 'value')]
-)
-def update_correlations(value):
-    df, ticker_list = ap.get_df_all_data('tickers_corr/correlations.csv')
-    df_correlation, dataframe = ap.get_correlation_table_window_x(df, value)
-    return dbc.Table.from_dataframe(df_correlation, bordered=True)
-
 @app.callback(
     Output('chart_rates_spreads', 'figure'),
     [Input('input_rates_spreads', 'value')]
@@ -167,6 +174,32 @@ def update_rates_spreads_performance(TICKER):
     data = ap.df_performance_rates_spreads()
     return dbc.Table.from_dataframe(data.round(2), bordered=True)
 
+@app.callback(
+    [Output('dd_output_container_correlations', 'children')],
+    Output('dd_output_container_correlation_graphs', 'figure'),
+    [Input('ticker_dropdown_correlations', 'value')]
+)
+def update_correlations(value):
+    # Fetch the data
+    df, ticker_list = ap.get_df_all_data('tickers_corr/correlations.csv')
+    df_correlation, dataframe = ap.get_correlation_table_window_x(df, value)
+    
+    # Create the correlation table and graphs
+    correlation_table = dbc.Table.from_dataframe(df_correlation, bordered=True)
+    fig = ap.create_correlation_graph(dataframe, ticker_list, value)
+    
+    return correlation_table, fig
+
+#@app.callback(
+    #[Output('dd_output_container_correlation_graphs', 'figure')],
+    #[Input('ticker_dropdown_correlations', 'value')]
+#)
+#def update_correlation_graphs(value):
+    
+    ## Generate the correlation graph using the new function
+    #fig = ap.create_correlation_graph(dataframe, ticker_list, value)
+    #pass
+
 # Highlight the active link
 @app.callback(
     [Output(f"{link}-link", "active") for link in ["performance", "correlations", "risk-metrics"]],
@@ -174,6 +207,11 @@ def update_rates_spreads_performance(TICKER):
 )
 def toggle_active_links(pathname):
     return [pathname == f"/{link}" for link in ["performance", "correlations", "risk-metrics"]]
+
+
+
+
+
 
 
 # Run the server
