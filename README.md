@@ -14,7 +14,7 @@ The **Macro Report App** provides a daily overview of changes in macro financial
 ```plaintext
 Macro_Report_App/
 │
-├── app_performance.py        # Main Python script to run the app
+├── app_performance.py        # Main Python script to run the app and display dashboard
 ├── data_performance.py       # Script to establish connection with TWS API and retrieve data
 ├── requirements.txt          # Python dependencies
 ├── tickers/                  # Directory containing contact details for performance tickers grouped by sector in csv files
@@ -26,25 +26,32 @@ Macro_Report_App/
 
 ### 1. Clone the Repository
 
-Clone the repository to your local machine:
+Clone the repository to your local machine & make it the current directory in terminal:
 
 ```bash
-git clone https://github.com/yourusername/Macro_Report_App.git
+git clone https://github.com/kustex/Macro_Report_App.git
 cd Macro_Report_App
 ```
 
-### 2. Install Dependencies
+### 3. Create & activate a virtual environment 
+```bash
+python -m venv venv
+source venv/bin/activate 
+```
+
+### 4. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Running the App
-1. Prepare Data Files: Ensure that the necessary data files (tickers/*.csv and tickers_corr/correlations.csv) are available and updated daily.
-2. Run the App: Execute the main Python script to start the app:
+### 5. Running the App
+1. Prepare Data Files: Ensure that the necessary data files (tickers/*.csv and tickers_corr/correlations.csv) are available.
+2. Have an instance of Interactive Brokers' TWS running. Make sure you are subscribed to their data tier & change the socket port for establishing API connection to '7496' in Configure/API/Settings. 
+3. Run the App: Execute the main Python script to start the app:
 ```bash
 python app_performance.py
 ```
-3. Access the App: Open your web browser and go to:
+### 6. Access the App: Open your web browser and go to:
 ```arduino
 http://127.0.0.1:8050/
 ```
