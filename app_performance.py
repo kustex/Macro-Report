@@ -59,6 +59,7 @@ app.layout = html.Div([
 ])
 
 # Define the layouts for each page
+# Performance Layout
 performance_layout = html.Div([
     dbc.Container([
         dbc.Row([
@@ -76,10 +77,10 @@ performance_layout = html.Div([
                         html.Br(),
                     ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}),
                 ]),
-
                 dbc.Col([
                     html.Div(id='dd_output_container')
                 ], style={'textAlign': 'center'})
+
             ], align='center')
         ])
     ])
@@ -110,6 +111,7 @@ risk_metrics_layout = html.Div([
     ])
 ])
 
+# Correlations Layout
 correlations_layout = html.Div([
     html.Br(),
     html.H2(children='Correlations', style={'textAlign': 'center'}),
@@ -131,8 +133,6 @@ correlations_layout = html.Div([
         ])
     ], align='center')
 ])
-
-
 
 # Callback to control page navigation
 @app.callback(
@@ -190,16 +190,6 @@ def update_correlations(value):
     
     return correlation_table, fig
 
-#@app.callback(
-    #[Output('dd_output_container_correlation_graphs', 'figure')],
-    #[Input('ticker_dropdown_correlations', 'value')]
-#)
-#def update_correlation_graphs(value):
-    
-    ## Generate the correlation graph using the new function
-    #fig = ap.create_correlation_graph(dataframe, ticker_list, value)
-    #pass
-
 # Highlight the active link
 @app.callback(
     [Output(f"{link}-link", "active") for link in ["performance", "correlations", "risk-metrics"]],
@@ -207,12 +197,6 @@ def update_correlations(value):
 )
 def toggle_active_links(pathname):
     return [pathname == f"/{link}" for link in ["performance", "correlations", "risk-metrics"]]
-
-
-
-
-
-
 
 # Run the server
 if __name__ == '__main__':

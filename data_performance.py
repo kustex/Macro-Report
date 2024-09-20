@@ -114,7 +114,6 @@ class app_performance:
                 for contract in contracts_midpoint
             ])
             all_bars = all_bars_adj_last + all_bars_midpoint
-            # self.ib.disconnect()
             return all_bars, tickers
 
     def get_df_all_data(self, filename):
@@ -147,17 +146,6 @@ class app_performance:
             df[ticker] = px.chartDF(ticker, timeframe= '1y', token=token).close
         # print(df[::-1])
         return df[::-1], tickers
-
-#    def performance(self, data):
-        #tickerlist = list(data.columns)
-        #tickerlist = " ".join(tickerlist)
-        #tickerlist = tickerlist.split()
-        #window_names = ['Ticker', 'Price', '1D', '1W', '3W', '1M', 'MTD', '3M', 'QTD', 'YTD', 'vs 52w max', 'vs 52w min']
-
-        
-
-
-        #return df
 
     def get_performance(self, data):
         '''
@@ -232,12 +220,14 @@ class app_performance:
         return data.round(2), dataframe
 
     def create_correlation_graph(self, dataframe, ticker_list, selected_ticker):
+        '''
+        This function automates creation of scatterplots of correlations between tickers over different time horizons.
+        '''
         dt_3m = date.today() - timedelta(weeks=12)
         dataframe = dataframe.loc[dt_3m:]
         time_horizons = ['15', '30', '90', '120', '180']
         time_horizon_names = ['%sD' %(i) for i in time_horizons]
         rng = np.arange(1, 1 + len(time_horizons))
-
         fig = make_subplots(
             rows=len(time_horizons), 
             cols=1,
@@ -260,13 +250,8 @@ class app_performance:
 
         fig.update_layout(
             autosize=True,
-            #title=f'Correlations of {selected_ticker} Across Time Horizons',
-            #xaxis_title='Date',
-            #yaxis_title='Correlation',
             margin=dict(l=100, r=100),
-            #width=1500,
             height=2000,
-             
         )
         return fig
 
@@ -404,20 +389,12 @@ class app_performance:
         for n in range(int((date2 - date1).days) + 1):
             yield date1 + timedelta(n)
 
-    def calendar_days(self):
-        # create a calendar
-        nyse = mcal.get_calendar('NYSE')
-        yesterday = (date.today() - timedelta(1)).strftime('%Y-%m-%d')
-        year_ago = (date.today() - timedelta(weeks=52)).strftime('%Y-%m-%d')
-        schedule = nyse.schedule(start_date=year_ago, end_date=yesterday)
-        return mcal.date_range(schedule, frequency='1D') 
+#    def calendar_days(self):
+        ## create a calendar
+        #nyse = mcal.get_calendar('NYSE')
+        #yesterday = (date.today() - timedelta(1)).strftime('%Y-%m-%d')
+        #year_ago = (date.today() - timedelta(weeks=52)).strftime('%Y-%m-%d')
+        #schedule = nyse.schedule(start_date=year_ago, end_date=yesterday)
+        #return mcal.date_range(schedule, frequency='1D') 
 
 
-#ap = app_performance()
-#df = ap.get_df_all_data('tickers/sectors.csv')
-#perf = ap.get_performance(df[0])
-#print(perf)
-
-#len_week, len_3w, len_4w, len_mtd, len_3m, len_qtd, len_ytd = ap.get_lengths_periods()
-#print(ap.calendar_days())
-#print(len_week, len_3w, len_4w)
