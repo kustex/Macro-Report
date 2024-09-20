@@ -106,7 +106,7 @@ risk_metrics_layout = html.Div([
                 html.Br(),
                 dcc.Graph(id='chart_rates_spreads'),
                 html.Div(id='rates_spreads_performance')
-            ])
+            ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'})
         ], align='center')
     ])
 ])
