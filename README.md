@@ -14,8 +14,10 @@ The **Macro Report App** provides a daily overview of changes in macro financial
 ```plaintext
 Macro_Report_App/
 │
-├── app_performance.py        # Main Python script to run the app and display dashboard
-├── data_performance.py       # Script to establish connection with TWS API and retrieve data
+├── app.py        # Main Python script to run the app and display dashboard
+├── stock_data_service.py     # class to retrieve data
+├── database_client.py        # class that stores data in sql database
+├── calculations.py           # class that wrangles the data
 ├── requirements.txt          # Python dependencies
 ├── tickers/                  # Directory containing contact details for performance tickers grouped by sector in csv files
 ├── tickers_corr/             # Directory containing contract details for correlation tickers in csv files
