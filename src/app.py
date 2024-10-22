@@ -225,6 +225,6 @@ def update_correlations(value):
 def toggle_active_links(pathname):
     return [pathname == f"/{link}" for link in ["performance", "correlations", "risk-metrics"]]
 
-# Run the server
-if __name__ == '__main__':
-    app.run_server(debug=True)
+# # Run the server
+# if __name__ == '__main__':
+#     app.run_server(debug=True)
