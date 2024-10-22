@@ -21,7 +21,6 @@ class StockCalculations:
         window_names = ['Ticker', 'Price', '1D', '1W', '1M', '3M', 'vs 52w max', 'vs 52w min', 'vs 3Y ave', 'vs 5Y ave']
         ticker_list = df.columns.tolist()
 
-        print(self.get_lengths_periods())
         len_week, len_1m, len_3m = self.get_lengths_periods()[:3]
         results = []
 
@@ -49,98 +48,88 @@ class StockCalculations:
 
         df = pd.DataFrame(results, columns=window_names)
         return df
+    
+    def get_end_date(self):
+        belgium_tz = pytz.timezone('Europe/Brussels')
+        current_time = datetime.now(belgium_tz)
+        cutoff_time = current_time.replace(hour=22, minute=0, second=0, microsecond=0)
+
+        if current_time > cutoff_time:
+            return current_time.strftime('%Y-%m-%d')  # Use today's date
+        else:
+            return (current_time - timedelta(days=1)).strftime('%Y-%m-%d')
 
     def get_performance(self, data, start_date=None):
-            """
-            Creates a DataFrame showing price changes over different time horizons in percentage terms.
-            """
-            window_names = ['Ticker', 'Price', '1D', '1W', '3W', '1M', 'MTD', '3M', 'QTD', 
-                            'YTD', 'vs 52w max', 'vs 52w min']
+        """
+        Creates a DataFrame showing price changes over different time horizons in percentage terms.
+        """
+        if data.empty:
+            raise ValueError("DataFrame is empty. Cannot fetch latest date.")
 
-            # Get the current time in Belgium timezone
-            belgium_tz = pytz.timezone('Europe/Brussels')
-            current_time = dt.datetime.now(belgium_tz).time()
+        window_names = ['Ticker', 'Price', '1D', '1W', '3W', '1M', 'MTD', '3M', 'QTD', 
+                        'YTD', 'vs 52w max', 'vs 52w min']
 
-            # Define the time range (00:00 - 22:00 Belgian time)
-            start_time = dt.time(0, 0)  # 00:00
-            cutoff_time = dt.time(22, 0)  # 22:00
+        end_date = self.get_end_date()
+        data.index = pd.to_datetime(data.index)
+        data = data[data.index <= end_date]
+        performance_data = []
 
-            today = dt.date.today()
+        periods = {
+            '1D': dt.timedelta(days=1),
+            '1W': dt.timedelta(weeks=1),
+            '3W': dt.timedelta(weeks=3),
+            '1M': dt.timedelta(days=30),
+            'MTD': dt.datetime.today().replace(day=1),
+            '3M': dt.timedelta(days=90),
+            'QTD': dt.datetime.today().replace(month=((dt.datetime.today().month - 1) // 3) * 3 + 1, day=1),
+            'YTD': dt.datetime(dt.datetime.today().year, 1, 1)
+        }
 
-            # Ensure the index is in datetime format
-            data.index = pd.to_datetime(data.index)
+        for ticker in data.columns:
+            data_perf = data[ticker]
+            latest_price = data_perf.iloc[-1]
+            results = [latest_price.round(2)]
+            
+            current_date = data_perf.index[-1]
 
-            # Check if the data is empty
-            if data.empty:
-                raise ValueError("DataFrame is empty. Cannot fetch latest date.")
-
-            # Create a list to hold performance data
-            performance_data = []
-
-            # Define periods for performance calculations
-            periods = {
-                '1D': dt.timedelta(days=1),
-                '1W': dt.timedelta(weeks=1),
-                '3W': dt.timedelta(weeks=3),
-                '1M': dt.timedelta(days=30),
-                'MTD': today.replace(day=1),
-                '3M': dt.timedelta(days=90),
-                'QTD': today.replace(month=((today.month - 1) // 3) * 3 + 1, day=1),
-                'YTD': dt.date(today.year, 1, 1)
-            }
-
-            # For each ticker, calculate the performance metrics
-            for ticker in data.columns:
-                data_perf = data[ticker]
-
-                # Determine which close price to use (yesterday's or today's)
-                if start_time <= current_time < cutoff_time:
-                    # Use yesterday's close if the current time is between 00:00 and 22:00
-                    if len(data_perf) < 2:
-                        raise ValueError("Not enough data to calculate yesterday's close.")
-                    latest_price = data_perf.iloc[-2]  # Yesterday's close
+            for period_name, delta in periods.items():
+                if isinstance(delta, dt.date):
+                    period_date = delta
                 else:
-                    # Use today's close if the current time is after 22:00
-                    latest_price = data_perf.iloc[-1]  # Today's close
+                    period_date = current_date - delta
+                
+                # If the period date is in the index, fetch the price directly
+                if period_date in data_perf.index:
+                    period_price = data_perf.loc[period_date]
+                else:
+                    # If the period date is not available, look for the closest earlier date
+                    try:
+                        period_price = data_perf.loc[data_perf.index <= period_date].iloc[-1]
+                    except IndexError:
+                        period_price = None
+                
+                if period_price is not None:
+                    change = (latest_price - period_price) / period_price
+                    results.append("{:.2%}".format(change))
+                else:
+                    results.append(None)
 
-                results = [latest_price.round(2)]
+            # Calculate yearly high and low performance metrics
+            one_year_ago = data_perf.index[-1] - dt.timedelta(weeks=52)
+            one_year_data = data_perf.loc[one_year_ago:data_perf.index[-1]]
 
-                for period_name, delta in periods.items():
-                    if isinstance(delta, dt.date):
-                        period_date = delta
-                    else:
-                        period_date = data_perf.index[-1] - delta
+            yearly_high = one_year_data.max()
+            yearly_low = one_year_data.min()
 
-                    closest_date = self.get_closest_date(data_perf.index, period_date)
+            vs_52_max = (latest_price - yearly_high) / yearly_high
+            vs_52_min = (latest_price - yearly_low) / yearly_low
 
-                    if closest_date in data_perf.index:
-                        period_price = data_perf.loc[closest_date]
-                        change = (latest_price - period_price) / period_price
-                        results.append("{:.2%}".format(change))
-                    else:
-                        results.append(None)
+            results.extend(["{:.2%}".format(vs_52_max), "{:.2%}".format(vs_52_min)])
+            performance_data.append([ticker] + results)
 
-                # Calculate yearly high and low performance metrics
-                one_year_ago = data_perf.index[-1] - dt.timedelta(weeks=52)
-                one_year_data = data_perf.loc[one_year_ago:data_perf.index[-1]]
+        performance_df = pd.DataFrame(performance_data, columns=window_names)
 
-                yearly_high = one_year_data.max()
-                yearly_low = one_year_data.min()
-
-                vs_52_max = (latest_price - yearly_high) / yearly_high
-                vs_52_min = (latest_price - yearly_low) / yearly_low
-
-                results.extend(["{:.2%}".format(vs_52_max), "{:.2%}".format(vs_52_min)])
-                performance_data.append([ticker] + results)
-
-            performance_df = pd.DataFrame(performance_data, columns=window_names)
-
-            # Return only the performance data without dates
-            return performance_df.sort_values(by='Ticker').set_index('Ticker')
-
-    def get_closest_date(self, index, target_date):
-        idx_pos = index.get_indexer([target_date], method='nearest')
-        return index[idx_pos][0]
+        return performance_df.sort_values(by='Ticker').set_index('Ticker')
 
     def get_one_year_range(self, index):
         one_year_ago = pd.Timestamp(dt.date.today() - dt.timedelta(weeks=52))
@@ -170,6 +159,10 @@ class StockCalculations:
         '''
         This function creates a pandas dataframe. In it, correlations (pearson method) between different contracts are being calculated and shown, over different time horizons.
         '''
+        end_date = self.get_end_date()
+        df.index = pd.to_datetime(df.index)
+        df = df[df.index <= end_date] 
+
         window_list = [15, 30, 90, 120, 180]
         tickerlist = list(df.columns)
         TICKER = value

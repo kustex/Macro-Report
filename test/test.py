@@ -21,24 +21,28 @@ sqlite3.register_adapter(datetime, adapt_datetime)
 sqlite3.register_converter("DATE", convert_datetime)
 
 async def main():
-    db_client = DatabaseClient('data/stock_data.db')  
+    db_client = DatabaseClient('stock_data.db')  
     ap = StockDataService(db_client)
     calc = StockCalculations()
-    dir = 'res/tickers/'
+    # dir = 'res/tickers/'
     filename = 'sectors.csv'
 
     # Set date range
     start_date = ap.time_delta(2)
     end_date = datetime.today().strftime('%Y-%m-%d')
 
-    tickers = ap.get_tickers(dir, filename)
-    df = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
-    print(df)
+    # tickers = ap.get_tickers(dir, filename)
+    # df = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
+    # performance = calc.get_performance(df[0])
+    # print(performance)
 
-    # tickers = ap.get_tickers(dir, 'correlations_etfs.csv')
-    # df, ticker_list = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
+    dir = 'res/tickers_corr/'
+    tickers = ap.get_tickers(dir, 'correlations_etfs.csv')
+    df, ticker_list = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
 
-    # df_correlation, dataframe = calc.get_correlation_table_window_x(df, 'UUP')
+    df_correlation, dataframe = calc.get_correlation_table_window_x(df, 'UUP')
+    # print(dataframe)
+    # print(df_correlation)
     # fig = calc.create_correlation_graph(dataframe, ticker_list, 'UUP')
     # plt.show()
     # return fig
