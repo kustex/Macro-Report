@@ -53,11 +53,11 @@ pip install -r requirements.txt
 2. Have an instance of Interactive Brokers' TWS running. Make sure you are subscribed to their data tier & change the socket port for establishing API connection to '7496' in Configure/API/Settings. 
 3. Run the App: Execute the main Python script to start the app:
 ```bash
-python app_performance.py
+python src/main.py
 ```
 ### 6. Access the App: Open your web browser and go to:
 ```arduino
-http://127.0.0.1:8050/
+http://localhost:5000/
 ```
 
 
