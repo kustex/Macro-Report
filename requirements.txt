@@ -7,7 +7,5 @@ numpy==2.1.2
 pandas==2.2.3
 pandas_datareader==0.10.0
 plotly==5.24.1
-plotly==5.23.0
 pytz==2024.2
-pytz==2024.1
 yfinance==0.2.44
