@@ -1,5 +1,8 @@
 # Macro Report App
 
+[![CI Pipeline](https://github.com/kustex/Macro-Report/actions/workflows/ci.yml/badge.svg)](https://github.com/kustex/Macro-Report/actions/workflows/ci.yml)
+[![CD Pipeline](https://github.com/kustex/Macro-Report/actions/workflows/cd.yml/badge.svg)](https://github.com/kustex/Macro-Report/actions/workflows/cd.yml)
+
 ## Overview
 
 The **Macro Report App** provides a daily overview of changes in macro financial markets across different time horizons. It tracks performance metrics and analyzes correlations between major asset classes. This tool is ideal for financial analysts, investors, and anyone interested in macroeconomic trends.
@@ -14,14 +17,13 @@ The **Macro Report App** provides a daily overview of changes in macro financial
 ```plaintext
 Macro_Report_App/
 │
-├── app.py        # Main Python script to run the app and display dashboard
-├── stock_data_service.py     # class to retrieve data
-├── database_client.py        # class that stores data in sql database
-├── calculations.py           # class that wrangles the data
-├── requirements.txt          # Python dependencies
-├── tickers/                  # Directory containing contact details for performance tickers grouped by sector in csv files
-├── tickers_corr/             # Directory containing contract details for correlation tickers in csv files
-└── README.md                 # This README file
+├── src        # Main Python scripts to run the app and display dashboard
+├── res        # Folder that contains csv files to retrieve necessary tickers.
+├── test       # Python script to test functionalities for functions inside classes
+├── .gitignore
+├── Dockerfile  
+├── requirements.txt
+└── README.md                 
 ```
 
 ## Installation
@@ -51,11 +53,11 @@ pip install -r requirements.txt
 2. Have an instance of Interactive Brokers' TWS running. Make sure you are subscribed to their data tier & change the socket port for establishing API connection to '7496' in Configure/API/Settings. 
 3. Run the App: Execute the main Python script to start the app:
 ```bash
-python app_performance.py
+python src/main.py
 ```
 ### 6. Access the App: Open your web browser and go to:
 ```arduino
-http://127.0.0.1:8050/
+http://localhost:5000/
 ```
 
 
