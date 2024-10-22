@@ -17,14 +17,13 @@ The **Macro Report App** provides a daily overview of changes in macro financial
 ```plaintext
 Macro_Report_App/
 │
-├── app.py        # Main Python script to run the app and display dashboard
-├── stock_data_service.py     # class to retrieve data
-├── database_client.py        # class that stores data in sql database
-├── calculations.py           # class that wrangles the data
-├── requirements.txt          # Python dependencies
-├── tickers/                  # Directory containing contact details for performance tickers grouped by sector in csv files
-├── tickers_corr/             # Directory containing contract details for correlation tickers in csv files
-└── README.md                 # This README file
+├── src        # Main Python scripts to run the app and display dashboard
+├── res        # Folder that contains csv files to retrieve necessary tickers.
+├── test       # Python script to test functionalities for functions inside classes
+├── .gitignore
+├── Dockerfile  
+├── requirements.txt
+└── README.md                 
 ```
 
 ## Installation
