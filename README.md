@@ -1,3 +1,5 @@
+[![CI Pipeline](https://github.com/kustex/Macro-Report/actions/workflows/ci.yml/badge.svg)](https://github.com/kustex/Macro-Report/actions/workflows/ci.yml)
+
 # Macro Report App
 
 ## Overview
