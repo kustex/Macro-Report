@@ -12,7 +12,7 @@ from database_client import DatabaseClient
 from datetime import datetime
 
 # Initialize global instances for database and services
-db_client = DatabaseClient('data/stock_data.db')  
+db_client = DatabaseClient('stock_data.db')  
 ap = StockDataService(db_client)
 calc = StockCalculations()
 
@@ -197,7 +197,6 @@ def update_rates_spreads_performance(value):
 async def fetch_correlation_data(value):
     dir = 'res/tickers_corr/'
     tickers = ap.get_tickers(dir, 'correlations_etfs.csv')
-    print(tickers)
     df, ticker_list = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
 
     if df.empty:

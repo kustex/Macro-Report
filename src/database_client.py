@@ -1,11 +1,19 @@
+import os
 import pandas as pd
 import sqlite3
 
 
 class DatabaseClient:
     def __init__(self, db_name):
-        self.db_name = db_name
-        self.create_table()  # Create the table during initialization
+        self.db_dir_name = 'data'
+        self.db_name = os.path.join(self.db_dir_name, db_name)
+        self.ensure_data_folder_exists()
+        self.create_table()  
+    
+    def ensure_data_folder_exists(self):
+        # Create the 'data' directory if it doesn't exist
+        if not os.path.exists(self.db_dir_name):
+            os.makedirs(self.db_dir_name)
 
     def create_table(self):
         # Create the table if it does not exist

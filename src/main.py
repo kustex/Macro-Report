@@ -12,7 +12,7 @@ from database_client import DatabaseClient
 
 
 # Initialize global instances for database and services
-db_client = DatabaseClient('data/stock_data.db')  
+db_client = DatabaseClient('stock_data.db')  
 ap = StockDataService(db_client)
 calc = StockCalculations()
 
@@ -50,7 +50,7 @@ def run_async_job(job):
 def start_scheduler():
     scheduler = BackgroundScheduler()
     # Schedule the job to run every day at 10:00 PM CET
-    scheduler.add_job(run_async_job, 'cron', hour=22, minute=1, args=[fetch_latest_data], timezone='CET')
+    scheduler.add_job(run_async_job, 'cron', hour=14, minute=14, args=[fetch_latest_data], timezone='CET')
     scheduler.start()
     print("Scheduler started")
 
