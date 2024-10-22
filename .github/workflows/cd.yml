@@ -1,0 +1,39 @@
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+    - name: Check Docker Installation
+      run: sudo docker info || echo "Docker is not available"
+
+    - name: Prune unused Docker resources
+      run: sudo docker system prune -af  
+
+    - name: Pull Docker image
+      run: sudo docker pull smokepaus/macro-report:latest
+
+    - name: List Docker images
+      run: sudo docker images
+
+    - name: Stop and remove any existing containers
+      run: |
+        sudo docker stop macro-report-container || true
+        sudo docker rm macro-report-container || true
+
+    - name: Run Docker container
+      run: |
+        sudo docker run -d -p 80:5000 --name macro-report-container smokepaus/macro-report:latest
+    
+    - name: Prune dangling images
+      run: sudo docker image prune -f  
+
+    - name: Cleanup Docker volumes
+      run: sudo docker system prune -f --volumes  

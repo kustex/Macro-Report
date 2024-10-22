@@ -1,0 +1,32 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Login to Docker Hub
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+    - name: Prune unused Docker resources
+      run: docker system prune -af 
+
+    - name: Build the Docker image
+      run: docker build -t smokepaus/macro-report:latest .
+
+    - name: List Docker images
+      run: docker images
+
+    - name: Cleanup Docker
+      run: docker system prune -f --volumes
+
+    - name: Push to Docker Hub
+      run: docker push smokepaus/macro-report:latest
