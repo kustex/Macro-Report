@@ -85,7 +85,12 @@ performance_layout = html.Div([
                     ], style={'textAlign': 'center', 'marginLeft': 'auto', 'marginRight': 'auto'}),
                 ]),
                 dbc.Col([
-                    html.Div(id='dd_output_container')
+                    # Add dcc.Loading to show a spinner while the table is loading
+                    dcc.Loading(
+                        id='loading-performance-table',
+                        children=[html.Div(id='dd_output_container')],
+                        type='default'
+                    )
                 ], style={'textAlign': 'center'})
 
             ], align='center')
@@ -108,11 +113,20 @@ risk_metrics_layout = html.Div([
                             options=[{'label': x, 'value': x} for x in rates_spreads_tickers],
                             value='2Y-10Y Spread'
                         ),
-                    ], style={'textAlign': 'center','marginLeft':'auto', 'marginRight': 'auto'}),
+                    ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}),
                 ]),
                 html.Br(),
-                dcc.Graph(id='chart_rates_spreads'),
-                html.Div(id='rates_spreads_performance')
+                # Add dcc.Loading to show a spinner while the graph is loading
+                dcc.Loading(
+                    id='loading-rates-spreads-chart',
+                    children=[dcc.Graph(id='chart_rates_spreads')],
+                    type='default'
+                ),
+                dcc.Loading(
+                    id='loading-rates-spreads-performance',
+                    children=[html.Div(id='rates_spreads_performance')],
+                    type='default'
+                )
             ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'})
         ], align='center')
     ])
@@ -131,12 +145,22 @@ correlations_layout = html.Div([
                 id='ticker_dropdown_correlations'
             ),
             html.Br(),
-            html.Div(id='dd_output_container_correlations')
-        ], style={'textAlign': 'center','marginLeft':'auto', 'marginRight': 'auto'}, width={"size": 7}),
+            # Add dcc.Loading for the correlation table
+            dcc.Loading(
+                id='loading-correlation-table',
+                children=[html.Div(id='dd_output_container_correlations')],
+                type='default'
+            )
+        ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}, width={"size": 7}),
     ]),
     dbc.Row([
         dbc.Col([
-            dcc.Graph(id='dd_output_container_correlation_graphs', style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}),
+            # Add dcc.Loading for the correlation graphs
+            dcc.Loading(
+                id='loading-correlation-graphs',
+                children=[dcc.Graph(id='dd_output_container_correlation_graphs')],
+                type='default'
+            )
         ])
     ], align='center')
 ])
@@ -158,7 +182,7 @@ def display_page(pathname):
 async def fetch_performance_data(value):
     dir = 'res/tickers/'
     tickers = ap.get_tickers(dir, f'{value}.csv')
-    df, _ = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
+    df, _ = await ap.get_prices_for_tickers(tickers, start_date, end_date)
     df_performance = calc.get_performance(df)
     return df_performance
 
@@ -197,11 +221,7 @@ def update_rates_spreads_performance(value):
 async def fetch_correlation_data(value):
     dir = 'res/tickers_corr/'
     tickers = ap.get_tickers(dir, 'correlations_etfs.csv')
-    df, ticker_list = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
-
-    if df.empty:
-        return dbc.Alert("No data available for the selected ticker.", color="warning"), {}
-
+    df, ticker_list = await ap.get_prices_for_tickers(tickers, start_date, end_date)
     df_correlation, dataframe = calc.get_correlation_table_window_x(df, value)
     correlation_table = dbc.Table.from_dataframe(df_correlation, bordered=True)
     fig = calc.create_correlation_graph(dataframe, ticker_list, value)
@@ -225,6 +245,3 @@ def update_correlations(value):
 def toggle_active_links(pathname):
     return [pathname == f"/{link}" for link in ["performance", "correlations", "risk-metrics"]]
 
-# # Run the server
-# if __name__ == '__main__':
-#     app.run_server(debug=True)

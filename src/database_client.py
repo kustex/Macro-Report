@@ -44,15 +44,15 @@ class DatabaseClient:
             count = cursor.fetchone()[0]
         return count > 0
 
-    def fetch_closing_prices(self, symbol):
+    def fetch_prices(self, symbol):
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute(""" 
-                SELECT date, close FROM stock_data 
+                SELECT date, close, volume FROM stock_data 
                 WHERE symbol = ? 
                 ORDER BY date
             """, (symbol,))
-            return pd.DataFrame(cursor.fetchall(), columns=['date', 'close'])
+            return pd.DataFrame(cursor.fetchall(), columns=['date', 'close', 'volume'])
 
     def insert_stock_data(self, df):
         """Insert stock data into the database, avoiding duplicates."""

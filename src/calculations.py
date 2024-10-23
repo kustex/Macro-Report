@@ -62,16 +62,15 @@ class StockCalculations:
     def get_performance(self, data, start_date=None):
         """
         Creates a DataFrame showing price changes over different time horizons in percentage terms.
+        This version processes the nested dictionary input and only calculates price performance.
         """
-        if data.empty:
-            raise ValueError("DataFrame is empty. Cannot fetch latest date.")
+        if not data:
+            raise ValueError("Input dictionary is empty. Cannot fetch data.")
 
         window_names = ['Ticker', 'Price', '1D', '1W', '3W', '1M', 'MTD', '3M', 'QTD', 
                         'YTD', 'vs 52w max', 'vs 52w min']
-
-        end_date = self.get_end_date()
-        data.index = pd.to_datetime(data.index)
-        data = data[data.index <= end_date]
+        
+        end_date = self.get_end_date()  
         performance_data = []
 
         periods = {
@@ -85,50 +84,38 @@ class StockCalculations:
             'YTD': dt.datetime(dt.datetime.today().year, 1, 1)
         }
 
-        for ticker in data.columns:
-            data_perf = data[ticker]
-            latest_price = data_perf.iloc[-1]
-            results = [latest_price.round(2)]
-            
-            current_date = data_perf.index[-1]
+        for ticker, ticker_data in data.items():
+            dates = pd.to_datetime(ticker_data['date'])
+            close_prices = pd.Series(ticker_data['close'], index=dates)
+            close_prices = close_prices[close_prices.index <= end_date]
 
+            if close_prices.empty:
+                continue
+            latest_price = close_prices.iloc[-1]  
+            results = [latest_price.round(2)]  
+            current_date = close_prices.index[-1]  
             for period_name, delta in periods.items():
                 if isinstance(delta, dt.date):
                     period_date = delta
                 else:
                     period_date = current_date - delta
-                
-                # If the period date is in the index, fetch the price directly
-                if period_date in data_perf.index:
-                    period_price = data_perf.loc[period_date]
-                else:
-                    # If the period date is not available, look for the closest earlier date
-                    try:
-                        period_price = data_perf.loc[data_perf.index <= period_date].iloc[-1]
-                    except IndexError:
-                        period_price = None
-                
-                if period_price is not None:
-                    change = (latest_price - period_price) / period_price
+                try:
+                    period_price = close_prices.loc[close_prices.index <= period_date].iloc[-1]
+                    change = (latest_price - period_price) / period_price  
                     results.append("{:.2%}".format(change))
-                else:
+                except (IndexError, KeyError):  
                     results.append(None)
 
-            # Calculate yearly high and low performance metrics
-            one_year_ago = data_perf.index[-1] - dt.timedelta(weeks=52)
-            one_year_data = data_perf.loc[one_year_ago:data_perf.index[-1]]
-
+            one_year_ago = current_date - dt.timedelta(weeks=52)
+            one_year_data = close_prices.loc[one_year_ago:current_date]
             yearly_high = one_year_data.max()
             yearly_low = one_year_data.min()
-
-            vs_52_max = (latest_price - yearly_high) / yearly_high
-            vs_52_min = (latest_price - yearly_low) / yearly_low
-
-            results.extend(["{:.2%}".format(vs_52_max), "{:.2%}".format(vs_52_min)])
+            vs_52_max = (latest_price - yearly_high) / yearly_high if yearly_high else None
+            vs_52_min = (latest_price - yearly_low) / yearly_low if yearly_low else None
+            results.extend(["{:.2%}".format(vs_52_max) if vs_52_max is not None else None,
+                            "{:.2%}".format(vs_52_min) if vs_52_min is not None else None])
             performance_data.append([ticker] + results)
-
         performance_df = pd.DataFrame(performance_data, columns=window_names)
-
         return performance_df.sort_values(by='Ticker').set_index('Ticker')
 
     def get_one_year_range(self, index):
@@ -155,23 +142,37 @@ class StockCalculations:
             len_ytd = (datetime.today() - datetime(datetime.today().year, 1, 1)).days // 7 * 5
             return len_week, len_3w, len_1m, len_mtd, len_3m, len_qtd, len_ytd
     
-    def get_correlation_table_window_x(self, df, value):
+    def get_correlation_table_window_x(self, data, value):
         '''
         This function creates a pandas dataframe. In it, correlations (pearson method) between different contracts are being calculated and shown, over different time horizons.
         '''
         end_date = self.get_end_date()
-        df.index = pd.to_datetime(df.index)
-        df = df[df.index <= end_date] 
+        # df.index = pd.to_datetime(df.index)
+        # df = df[df.index <= end_date] 
 
         window_list = [15, 30, 90, 120, 180]
-        tickerlist = list(df.columns)
+        tickerlist = list(data.keys())
         TICKER = value
         MULTP_TICKERS = [item for item in tickerlist if value not in item]
 
         dataframe = pd.DataFrame()
         for window in window_list:
-            for i in MULTP_TICKERS:
-                dataframe[f'{TICKER}_{i}_{window}'] = df[TICKER].rolling(window).corr(df[i])
+                for i in MULTP_TICKERS:
+                    # Extract 'date' and 'close' for the TICKER and the comparison ticker
+                    dates_ticker = pd.to_datetime(data[TICKER]['date'])
+                    close_prices_ticker = pd.Series(data[TICKER]['close'], index=dates_ticker)
+                    close_prices_ticker = close_prices_ticker[close_prices_ticker.index <= end_date]
+
+                    dates_i = pd.to_datetime(data[i]['date'])
+                    close_prices_i = pd.Series(data[i]['close'], index=dates_i)
+                    close_prices_i = close_prices_i[close_prices_i.index <= end_date]
+
+                    # Align both series by their index (date) and drop any rows with NaN values
+                    combined_data = pd.concat([close_prices_ticker, close_prices_i], axis=1).dropna()
+                    combined_data.columns = [TICKER, i]
+
+                    # Calculate rolling correlation for the current window
+                    dataframe[f'{TICKER}_{i}_{window}'] = combined_data[TICKER].rolling(window).corr(combined_data[i])
 
         day_15 = dataframe.filter(regex='15')
         day_30 = dataframe.filter(regex='30')
@@ -179,8 +180,10 @@ class StockCalculations:
         day_120 = dataframe.filter(regex='120')
         day_180 = dataframe.filter(regex='180')
 
-        rolling_30d_max = [np.nanmax(dataframe[i]) for i in list(day_30.columns)]
-        rolling_30d_min = [np.nanmin(dataframe[i]) for i in list(day_30.columns)]
+        start_date = pd.Timestamp(dt.date.today() - timedelta(weeks=52))
+        day_30 = day_30[day_30.index >= start_date]
+        rolling_30d_max = [np.nanmax(day_30[i]) for i in list(day_30.columns)]
+        rolling_30d_min = [np.nanmin(day_30[i]) for i in list(day_30.columns)]
 
         data = pd.DataFrame()
         data['15D'] = np.array(day_15.iloc[-1, :])

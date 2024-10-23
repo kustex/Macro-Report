@@ -1,6 +1,7 @@
 import asyncio
 import matplotlib.pyplot as plt
 import logging
+import pandas as pd
 import sqlite3
 
 from src.calculations import StockCalculations
@@ -25,27 +26,24 @@ async def main():
     ap = StockDataService(db_client)
     calc = StockCalculations()
     # dir = 'res/tickers/'
-    filename = 'sectors.csv'
+    # filename = 'sectors.csv'
 
-    # Set date range
     start_date = ap.time_delta(2)
     end_date = datetime.today().strftime('%Y-%m-%d')
 
     # tickers = ap.get_tickers(dir, filename)
-    # df = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
+    # df = await ap.get_prices_for_tickers(tickers, start_date, end_date)
+
+
     # performance = calc.get_performance(df[0])
     # print(performance)
 
     dir = 'res/tickers_corr/'
     tickers = ap.get_tickers(dir, 'correlations_etfs.csv')
-    df, ticker_list = await ap.get_closing_prices_for_tickers(tickers, start_date, end_date)
-
+    df, ticker_list = await ap.get_prices_for_tickers(tickers, start_date, end_date)
     df_correlation, dataframe = calc.get_correlation_table_window_x(df, 'UUP')
-    # print(dataframe)
-    # print(df_correlation)
-    # fig = calc.create_correlation_graph(dataframe, ticker_list, 'UUP')
-    # plt.show()
-    # return fig
+    fig = calc.create_correlation_graph(dataframe, ticker_list, 'UUP')
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -39,7 +39,7 @@ unique_tickers = list(set(all_tickers))
 # Function to fetch the latest financial data
 async def fetch_latest_data():
     print(f"Fetching latest data at {datetime.now()}")
-    await ap.get_closing_prices_for_tickers(unique_tickers, start_date, end_date)  
+    await ap.get_prices_for_tickers(unique_tickers, start_date, end_date)  
 
 def run_async_job(job):
     # Create a new event loop for the thread and run the job
