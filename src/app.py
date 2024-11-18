@@ -74,11 +74,13 @@ performance_layout = html.Div([
                 dcc.Dropdown(
                     options=[{'label': x, 'value': x} for x in files],
                     value='sectors',  # Default value
-                    id='ticker_dropdown'
+                    id='ticker_dropdown',
+                    clearable=False,
                 ),
                 html.Br(),
             ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
         ]),
+        html.Br(),
         # Row for Returns Table and Returns Graph
         dbc.Row([
             # First Column: Returns Table
@@ -95,18 +97,17 @@ performance_layout = html.Div([
                             data=[],
                             row_selectable='single',
                             selected_rows=[0],
-                            style_table={'overflowX': 'auto'},
+                            style_table={'overflowX': 'auto', 'height': '400px'},  # Ensure full height visibility
                             style_cell={'textAlign': 'center'}
                         )
-                    ]
+                    ],
                 ),
-            ], width=6, style={'textAlign': 'center'}),
+            ], width=6),  # Fixed width for Returns Table
             # Second Column: Returns Graph
             dbc.Col([
                 html.H4("Returns Graph", style={'textAlign': 'center'}),
                 html.Br(),
                 dbc.Row([
-                    # Dropdown for selecting lookback period
                     dbc.Col([
                         dcc.Dropdown(
                             options=[
@@ -119,46 +120,46 @@ performance_layout = html.Div([
                             ],
                             value='1y',  # Default lookback period
                             id='lookback_dropdown',
-                            placeholder="Select Lookback Period"
+                            placeholder="Select Lookback Period",
+                            clearable=False
                         ),
-                        html.Br(),
                     ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
                 ]),
                 dcc.Loading(
                     type='circle',
                     id='loading-performance-graph',
-                    children=[dcc.Graph(id='returns_graph')],
+                    children=[dcc.Graph(id='returns_graph', style={'height': '400px'})],
                 ),
-            ], width=6, style={'textAlign': 'center'}),
+            ], width=6),  # Fixed width for Returns Graph
         ]),
         html.Br(),
+        # Row for Volume Table and Volume Graph
         dbc.Row([
-            # Volume Section
+            # Volume Table
             dbc.Col([
-                html.H4("Volume", style={'textAlign': 'center'}),
+                html.H4("Volume Table", style={'textAlign': 'center'}),
                 html.Br(),
                 dcc.Loading(
                     type='circle',
                     id='loading-performance-volume-table',
                     children=[
                         DataTable(
-                            id='volume_table',  # Placeholder volume table
+                            id='volume_table',
                             columns=[],
                             data=[],
                             row_selectable='single',
                             selected_rows=[0],
-                            style_table={'overflowX': 'auto'},
+                            style_table={'overflowX': 'auto', 'height': '400px'},  # Ensure full height visibility
                             style_cell={'textAlign': 'center'}
                         )
-                    ]
-                    # children=[html.Div(id='dd_output_container_volume')],
+                    ],
                 ),
-            ], width=6, style={'textAlign': 'center'}),
+            ], width=6),  # Fixed width for Volume Table
+            # Volume Graph
             dbc.Col([
-                html.H4("Volume graph", style={'textAlign': 'center'}),
+                html.H4("Volume Graph", style={'textAlign': 'center'}),
                 html.Br(),
                 dbc.Row([
-                    # Dropdown for selecting lookback period
                     dbc.Col([
                         dcc.Dropdown(
                             options=[
@@ -171,19 +172,19 @@ performance_layout = html.Div([
                             ],
                             value='1y',  # Default lookback period
                             id='lookback_dropdown_volume',
-                            placeholder="Select Lookback Period"
+                            placeholder="Select Lookback Period",
+                            clearable=False
                         ),
-                        html.Br(),
                     ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
                 ]),
                 dcc.Loading(
                     type='circle',
                     id='loading-graph-volume-graph',
-                    children=[dcc.Graph(id='volume_graph')]
+                    children=[dcc.Graph(id='volume_graph', style={'height': '400px'})],
                 ),
-            ])
+            ], width=6),  # Fixed width for Volume Graph
         ])
-    ])
+    ], fluid=True)  # Ensures container spans full width
 ])
 
 # Risk Metrics Layout
