@@ -6,11 +6,9 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pytz
-import seaborn as sns
 
 from datetime import datetime, timedelta, date
 from plotly.subplots import make_subplots
-from plotly.tools import mpl_to_plotly
 from stock_data_service import StockDataService
 from database_client import DatabaseClient
 
@@ -410,7 +408,6 @@ class StockCalculations:
         return fig
 
     def create_volume_and_rolling_avg_graph(self, selected_ticker, start_date, end_date):
-        # begin_data_date = (dt.date.today() - pd.DateOffset(years=10)).strftime('%Y-%m-%d') 
         data, _ = asyncio.run(ap.get_prices_for_tickers([selected_ticker], start_date, end_date))
         date = pd.to_datetime(data[selected_ticker]['date'])
         volume = data[selected_ticker]['volume']

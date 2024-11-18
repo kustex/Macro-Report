@@ -10,6 +10,8 @@ from src.stock_data_service import StockDataService
 from datetime import datetime, timedelta
 
 
+# ------------------------------------------------------------------------------
+
 logging.basicConfig(level=logging.INFO)
 
 def adapt_datetime(dt):
@@ -25,24 +27,15 @@ async def main():
     db_client = DatabaseClient('stock_data.db')  
     ap = StockDataService(db_client)
     calc = StockCalculations()
-    # dir = 'res/tickers/'
-    # filename = 'sectors.csv'
-
+    dir = 'res/tickers/'
     start_date = ap.time_delta(2)
     end_date = datetime.today().strftime('%Y-%m-%d')
 
-    # tickers = ap.get_tickers(dir, filename)
-    # df = await ap.get_prices_for_tickers(tickers, start_date, end_date)
-
-
-    # performance = calc.get_performance(df[0])
-    # print(performance)
-
-    dir = 'res/tickers_corr/'
-    tickers = ap.get_tickers(dir, 'correlations_etfs.csv')
-    df, ticker_list = await ap.get_prices_for_tickers(tickers, start_date, end_date)
-    df_correlation, dataframe = calc.get_correlation_table_window_x(df, 'UUP')
-    fig = calc.create_correlation_graph(dataframe, ticker_list, 'UUP')
+    tickers = ap.get_tickers(dir, 'sectors.csv')
+    dict, _ = await ap.get_prices_for_tickers(tickers, start_date, end_date)
+    ticker = 'SPY'
+    graph = calc.create_volume_and_rolling_avg_graph(dict, ticker)
+    print(graph)
 
 
 if __name__ == "__main__":

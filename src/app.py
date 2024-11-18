@@ -88,7 +88,17 @@ performance_layout = html.Div([
                 dcc.Loading(
                     type='circle',
                     id='loading-performance-table',
-                    children=[html.Div(id='dd_output_container')],
+                    children=[
+                        DataTable(
+                            id='returns_table',
+                            columns=[],
+                            data=[],
+                            row_selectable='single',
+                            selected_rows=[0],
+                            style_table={'overflowX': 'auto'},
+                            style_cell={'textAlign': 'center'}
+                        )
+                    ]
                 ),
             ], width=6, style={'textAlign': 'center'}),
             # Second Column: Returns Graph
@@ -107,7 +117,7 @@ performance_layout = html.Div([
                                 {'label': '3 Years', 'value': '3y'},
                                 {'label': 'All History', 'value': 'all'}
                             ],
-                            value='1m',  # Default lookback period
+                            value='1y',  # Default lookback period
                             id='lookback_dropdown',
                             placeholder="Select Lookback Period"
                         ),
@@ -130,7 +140,18 @@ performance_layout = html.Div([
                 dcc.Loading(
                     type='circle',
                     id='loading-performance-volume-table',
-                    children=[html.Div(id='dd_output_container_volume')],
+                    children=[
+                        DataTable(
+                            id='volume_table',  # Placeholder volume table
+                            columns=[],
+                            data=[],
+                            row_selectable='single',
+                            selected_rows=[0],
+                            style_table={'overflowX': 'auto'},
+                            style_cell={'textAlign': 'center'}
+                        )
+                    ]
+                    # children=[html.Div(id='dd_output_container_volume')],
                 ),
             ], width=6, style={'textAlign': 'center'}),
             dbc.Col([
@@ -148,7 +169,7 @@ performance_layout = html.Div([
                                 {'label': '3 Years', 'value': '3y'},
                                 {'label': 'All History', 'value': 'all'}
                             ],
-                            value='1m',  # Default lookback period
+                            value='1y',  # Default lookback period
                             id='lookback_dropdown_volume',
                             placeholder="Select Lookback Period"
                         ),
@@ -238,26 +259,28 @@ correlations_layout = html.Div([
     [Input('url', 'pathname')]
 )
 def display_page(pathname):
-    if pathname == '/correlations':
+    # Default to /performance for root route
+    if pathname in ['/', '/performance']:
+        return performance_layout
+    elif pathname == '/correlations':
         return correlations_layout
     elif pathname == '/risk-metrics':
         return risk_metrics_layout
-    elif pathname == '/performance':
-        return performance_layout
     else:
         return performance_layout
 
 @app.callback(
-    [Output('performance-link', 'active'), 
-     Output('correlations-link', 'active'), 
+    [Output('performance-link', 'active'),
+     Output('correlations-link', 'active'),
      Output('risk-metrics-link', 'active')],
     Input('url', 'pathname')
 )
 def update_active_links(pathname):
+    # Treat `/` as `/performance` for highlighting
     return (
-        pathname == '/performance',  
-        pathname == '/correlations',  
-        pathname == '/risk-metrics'  
+        pathname in ['/', '/performance'],  # Highlight performance for `/` or `/performance`
+        pathname == '/correlations',
+        pathname == '/risk-metrics'
     )
 
 @app.callback(
@@ -299,13 +322,21 @@ def update_returns_graph(lookback_period, selected_rows, table_data):
     return calc.generate_returns_graph(selected_ticker, start_date, today.strftime('%Y-%m-%d'))
 
 @app.callback(
-        Output('volume_graph', 'figure'),
-        [Input('lookback_dropdown_volume', 'value'),
-         Input('volume_table', 'selected_rows'),
-         Input('volume_table', 'data')]
+    Output('volume_graph', 'figure'),
+    [Input('lookback_dropdown_volume', 'value'),
+     Input('volume_table', 'selected_rows'),
+     Input('volume_table', 'data')]
 )
 def update_volume_graph(lookback_period, selected_rows, table_data):
+    """
+    Updates the volume and rolling average graph based on the selected row and lookback period.
+    """
+    if not selected_rows or not table_data:
+        return go.Figure()  # Return an empty figure if no row is selected
+
+    # Get the selected ticker
     selected_ticker = table_data[selected_rows[0]]['Ticker']
+
     # Determine the start date based on the lookback period
     today = datetime.today()
     if lookback_period == '1m':
@@ -320,8 +351,10 @@ def update_volume_graph(lookback_period, selected_rows, table_data):
         start_date = today - pd.DateOffset(years=3)
     elif lookback_period == 'all':
         start_date = None  # No filtering for all history
+
     if start_date is not None:
-        start_date = start_date.strftime('%Y-%m-%d')  
+        start_date = start_date.strftime('%Y-%m-%d')  # Format as 'YYYY-MM-DD'
+
     return calc.create_volume_and_rolling_avg_graph(selected_ticker, start_date, today.strftime('%Y-%m-%d'))
 
 async def fetch_volume_data(value):
@@ -332,28 +365,18 @@ async def fetch_volume_data(value):
     return df
 
 @app.callback(
-    Output('dd_output_container_volume', 'children'),
+    [Output('volume_table', 'data'),
+     Output('volume_table', 'columns')],
     [Input('ticker_dropdown', 'value')]
 )
-def update_volume_data(value):
+def update_volume_table(value):
     """
-    Updates the volume data and displays it as a DataTable.
+    Updates the volume table data and columns based on the selected stock group.
     """
     volume_data = asyncio.run(fetch_volume_data(value))
     volume_data.reset_index(inplace=True)
-
-    # Return a Dash DataTable
-    return DataTable(
-        id='volume_table',  # Unique ID for the volume table
-        columns=[
-            {'name': col, 'id': col} for col in volume_data.columns  # Automatically map columns
-        ],
-        data=volume_data.round(2).to_dict('records'),  # Convert DataFrame to a format DataTable understands
-        style_table={'overflowX': 'auto'},  # Add horizontal scrolling if needed
-        style_cell={'textAlign': 'center'},  # Center-align the text
-        row_selectable='single',  
-        selected_rows=[0]         
-    )
+    columns = [{'name': col, 'id': col} for col in volume_data.columns]
+    return volume_data.round(2).to_dict('records'), columns
 
 async def fetch_performance_data(value):
     dir = 'res/tickers/'
@@ -363,23 +386,15 @@ async def fetch_performance_data(value):
     return df_performance
 
 @app.callback(
-    Output('dd_output_container', 'children'), 
-    Input('ticker_dropdown', 'value')          
+    [Output('returns_table', 'data'),
+     Output('returns_table', 'columns')],
+    [Input('ticker_dropdown', 'value')]
 )
 def update_performance_table(value):
     performance_data = asyncio.run(fetch_performance_data(value))
     performance_data.reset_index(inplace=True)
-    return DataTable(
-        id='returns_table',  
-        columns=[
-            {'name': col, 'id': col} for col in performance_data.columns
-        ],
-        data=performance_data.to_dict('records'),  
-        style_table={'overflowX': 'auto'},
-        style_cell={'textAlign': 'center'},
-        row_selectable='single',  
-        selected_rows=[0]         
-    )
+    columns = [{'name': col, 'id': col} for col in performance_data.columns]
+    return performance_data.round(2).to_dict('records'), columns
 
 async def fetch_performance_rates():
     df = await ap.df_rates_spreads()
