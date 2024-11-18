@@ -4,8 +4,9 @@ import os
 import pandas as pd
 import plotly.graph_objects as go
 
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, State
 from dash.dependencies import Input, Output
+from dash.dash_table import DataTable
 from calculations import StockCalculations 
 from stock_data_service import StockDataService
 from database_client import DatabaseClient
@@ -65,35 +66,101 @@ content = html.Div(id="page-content", style={"margin-left": "18rem", "padding": 
 # Define the app layout
 app.layout = html.Div([dcc.Location(id='url', refresh=False), sidebar, content])
 
-# Define the layouts for each page
-# Performance Layout
 performance_layout = html.Div([
     dbc.Container([
+        # Dropdown for selecting stock group
         dbc.Row([
             dbc.Col([
+                dcc.Dropdown(
+                    options=[{'label': x, 'value': x} for x in files],
+                    value='sectors',  # Default value
+                    id='ticker_dropdown'
+                ),
                 html.Br(),
-                html.H2(children='Performance', style={'textAlign': 'center'}),
+            ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
+        ]),
+        # Row for Returns Table and Returns Graph
+        dbc.Row([
+            # First Column: Returns Table
+            dbc.Col([
+                html.H4("Returns Table", style={'textAlign': 'center'}),
+                html.Br(),
+                dcc.Loading(
+                    type='circle',
+                    id='loading-performance-table',
+                    children=[html.Div(id='dd_output_container')],
+                ),
+            ], width=6, style={'textAlign': 'center'}),
+            # Second Column: Returns Graph
+            dbc.Col([
+                html.H4("Returns Graph", style={'textAlign': 'center'}),
                 html.Br(),
                 dbc.Row([
+                    # Dropdown for selecting lookback period
                     dbc.Col([
                         dcc.Dropdown(
-                            options=[{'label': x, 'value': x} for x in files],
-                            value='sectors',
-                            id='ticker_dropdown'
+                            options=[
+                                {'label': '1 Month', 'value': '1m'},
+                                {'label': '3 Months', 'value': '3m'},
+                                {'label': '6 Months', 'value': '6m'},
+                                {'label': '1 Year', 'value': '1y'},
+                                {'label': '3 Years', 'value': '3y'},
+                                {'label': 'All History', 'value': 'all'}
+                            ],
+                            value='1m',  # Default lookback period
+                            id='lookback_dropdown',
+                            placeholder="Select Lookback Period"
                         ),
                         html.Br(),
-                    ], style={'textAlign': 'center', 'marginLeft': 'auto', 'marginRight': 'auto'}),
+                    ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
                 ]),
-                dbc.Col([
-                    # Add dcc.Loading to show a spinner while the table is loading
-                    dcc.Loading(
-                        id='loading-performance-table',
-                        children=[html.Div(id='dd_output_container')],
-                        type='default'
-                    )
-                ], style={'textAlign': 'center'})
-
-            ], align='center')
+                dcc.Loading(
+                    type='circle',
+                    id='loading-performance-graph',
+                    children=[dcc.Graph(id='returns_graph')],
+                ),
+            ], width=6, style={'textAlign': 'center'}),
+        ]),
+        html.Br(),
+        dbc.Row([
+            # Volume Section
+            dbc.Col([
+                html.H4("Volume", style={'textAlign': 'center'}),
+                html.Br(),
+                dcc.Loading(
+                    type='circle',
+                    id='loading-performance-volume-table',
+                    children=[html.Div(id='dd_output_container_volume')],
+                ),
+            ], width=6, style={'textAlign': 'center'}),
+            dbc.Col([
+                html.H4("Volume graph", style={'textAlign': 'center'}),
+                html.Br(),
+                dbc.Row([
+                    # Dropdown for selecting lookback period
+                    dbc.Col([
+                        dcc.Dropdown(
+                            options=[
+                                {'label': '1 Month', 'value': '1m'},
+                                {'label': '3 Months', 'value': '3m'},
+                                {'label': '6 Months', 'value': '6m'},
+                                {'label': '1 Year', 'value': '1y'},
+                                {'label': '3 Years', 'value': '3y'},
+                                {'label': 'All History', 'value': 'all'}
+                            ],
+                            value='1m',  # Default lookback period
+                            id='lookback_dropdown_volume',
+                            placeholder="Select Lookback Period"
+                        ),
+                        html.Br(),
+                    ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
+                ]),
+                dcc.Loading(
+                    type='circle',
+                    id='loading-graph-volume-graph',
+                    children=[dcc.Graph(id='volume_graph')]
+                ),
+            ])
         ])
     ])
 ])
@@ -116,16 +183,17 @@ risk_metrics_layout = html.Div([
                     ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}),
                 ]),
                 html.Br(),
-                # Add dcc.Loading to show a spinner while the graph is loading
+                html.Br(),
                 dcc.Loading(
+                    type='circle',
                     id='loading-rates-spreads-chart',
                     children=[dcc.Graph(id='chart_rates_spreads')],
-                    type='default'
                 ),
+                html.Br(),
                 dcc.Loading(
+                    type='circle',
                     id='loading-rates-spreads-performance',
                     children=[html.Div(id='rates_spreads_performance')],
-                    type='default'
                 )
             ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'})
         ], align='center')
@@ -145,27 +213,26 @@ correlations_layout = html.Div([
                 id='ticker_dropdown_correlations'
             ),
             html.Br(),
-            # Add dcc.Loading for the correlation table
+            html.Br(),
             dcc.Loading(
+                    type='circle',
                 id='loading-correlation-table',
                 children=[html.Div(id='dd_output_container_correlations')],
-                type='default'
             )
         ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}, width={"size": 7}),
     ]),
     dbc.Row([
         dbc.Col([
-            # Add dcc.Loading for the correlation graphs
+            html.Br(),
             dcc.Loading(
+                type='circle',
                 id='loading-correlation-graphs',
                 children=[dcc.Graph(id='dd_output_container_correlation_graphs')],
-                type='default'
             )
         ])
     ], align='center')
 ])
 
-# Callback to control page navigation
 @app.callback(
     Output('page-content', 'children'),
     [Input('url', 'pathname')]
@@ -175,10 +242,119 @@ def display_page(pathname):
         return correlations_layout
     elif pathname == '/risk-metrics':
         return risk_metrics_layout
+    elif pathname == '/performance':
+        return performance_layout
     else:
-        return performance_layout  # Default page is Performance
+        return performance_layout
 
-# Async function to fetch performance data
+@app.callback(
+    [Output('performance-link', 'active'), 
+     Output('correlations-link', 'active'), 
+     Output('risk-metrics-link', 'active')],
+    Input('url', 'pathname')
+)
+def update_active_links(pathname):
+    return (
+        pathname == '/performance',  
+        pathname == '/correlations',  
+        pathname == '/risk-metrics'  
+    )
+
+@app.callback(
+    Output('returns_graph', 'figure'),
+    [Input('lookback_dropdown', 'value'),  # Lookback period
+     Input('returns_table', 'selected_rows'),  # Row selection
+     Input('returns_table', 'data')]  # Table data
+)
+def update_returns_graph(lookback_period, selected_rows, table_data):
+    """
+    Updates the returns graph based on the selected row and lookback period.
+    """
+    if not selected_rows or not table_data:
+        return go.Figure()  # Return an empty figure if no row is selected
+
+    # Get the selected ticker
+    selected_ticker = table_data[selected_rows[0]]['Ticker']
+
+    # Determine the start date based on the lookback period
+    today = datetime.today()
+    if lookback_period == '1m':
+        start_date = today - pd.DateOffset(weeks=4)
+    elif lookback_period == '3m':
+        start_date = today - pd.DateOffset(weeks=12)
+    elif lookback_period == '6m':
+        start_date = today - pd.DateOffset(weeks=24)
+    elif lookback_period == '1y':
+        start_date = today - pd.DateOffset(years=1)
+    elif lookback_period == '3y':
+        start_date = today - pd.DateOffset(years=3)
+    elif lookback_period == 'all':
+        start_date = None  # No filtering for all history
+
+    # Convert start_date to string if not None
+    if start_date is not None:
+        start_date = start_date.strftime('%Y-%m-%d')  # Format as 'YYYY-MM-DD'
+
+    # Generate the graph
+    return calc.generate_returns_graph(selected_ticker, start_date, today.strftime('%Y-%m-%d'))
+
+@app.callback(
+        Output('volume_graph', 'figure'),
+        [Input('lookback_dropdown_volume', 'value'),
+         Input('volume_table', 'selected_rows'),
+         Input('volume_table', 'data')]
+)
+def update_volume_graph(lookback_period, selected_rows, table_data):
+    selected_ticker = table_data[selected_rows[0]]['Ticker']
+    # Determine the start date based on the lookback period
+    today = datetime.today()
+    if lookback_period == '1m':
+        start_date = today - pd.DateOffset(weeks=4)
+    elif lookback_period == '3m':
+        start_date = today - pd.DateOffset(weeks=12)
+    elif lookback_period == '6m':
+        start_date = today - pd.DateOffset(weeks=24)
+    elif lookback_period == '1y':
+        start_date = today - pd.DateOffset(years=1)
+    elif lookback_period == '3y':
+        start_date = today - pd.DateOffset(years=3)
+    elif lookback_period == 'all':
+        start_date = None  # No filtering for all history
+    if start_date is not None:
+        start_date = start_date.strftime('%Y-%m-%d')  
+    return calc.create_volume_and_rolling_avg_graph(selected_ticker, start_date, today.strftime('%Y-%m-%d'))
+
+async def fetch_volume_data(value):
+    dir = 'res/tickers/'  
+    tickers = ap.get_tickers(dir, f'{value}.csv')
+    data, _ = await ap.get_prices_for_tickers(tickers, start_date, end_date) 
+    df = calc.get_performance_vs_rolling_mean(data)
+    return df
+
+@app.callback(
+    Output('dd_output_container_volume', 'children'),
+    [Input('ticker_dropdown', 'value')]
+)
+def update_volume_data(value):
+    """
+    Updates the volume data and displays it as a DataTable.
+    """
+    volume_data = asyncio.run(fetch_volume_data(value))
+    volume_data.reset_index(inplace=True)
+
+    # Return a Dash DataTable
+    return DataTable(
+        id='volume_table',  # Unique ID for the volume table
+        columns=[
+            {'name': col, 'id': col} for col in volume_data.columns  # Automatically map columns
+        ],
+        data=volume_data.round(2).to_dict('records'),  # Convert DataFrame to a format DataTable understands
+        style_table={'overflowX': 'auto'},  # Add horizontal scrolling if needed
+        style_cell={'textAlign': 'center'},  # Center-align the text
+        row_selectable='single',  
+        selected_rows=[0]         
+    )
+
 async def fetch_performance_data(value):
     dir = 'res/tickers/'
     tickers = ap.get_tickers(dir, f'{value}.csv')
@@ -187,13 +363,23 @@ async def fetch_performance_data(value):
     return df_performance
 
 @app.callback(
-    Output('dd_output_container', 'children'),
-    [Input('ticker_dropdown', 'value')]
+    Output('dd_output_container', 'children'), 
+    Input('ticker_dropdown', 'value')          
 )
-def update_performance(value):
+def update_performance_table(value):
     performance_data = asyncio.run(fetch_performance_data(value))
     performance_data.reset_index(inplace=True)
-    return dbc.Table.from_dataframe(performance_data.round(2), bordered=True, striped=True, hover=True)
+    return DataTable(
+        id='returns_table',  
+        columns=[
+            {'name': col, 'id': col} for col in performance_data.columns
+        ],
+        data=performance_data.to_dict('records'),  
+        style_table={'overflowX': 'auto'},
+        style_cell={'textAlign': 'center'},
+        row_selectable='single',  
+        selected_rows=[0]         
+    )
 
 async def fetch_performance_rates():
     df = await ap.df_rates_spreads()
@@ -237,11 +423,4 @@ def update_correlations(value):
     correlation_data = asyncio.run(fetch_correlation_data(value))
     return correlation_data
 
-# Highlight the active link
-@app.callback(
-    [Output(f"{link}-link", "active") for link in ["performance", "correlations", "risk-metrics"]],
-    [Input("url", "pathname")]
-)
-def toggle_active_links(pathname):
-    return [pathname == f"/{link}" for link in ["performance", "correlations", "risk-metrics"]]
 

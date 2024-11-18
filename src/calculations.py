@@ -1,3 +1,4 @@
+import asyncio
 import datetime as dt
 import logging
 import matplotlib.pyplot as plt
@@ -5,12 +6,20 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pytz
+import seaborn as sns
 
 from datetime import datetime, timedelta, date
 from plotly.subplots import make_subplots
+from plotly.tools import mpl_to_plotly
+from stock_data_service import StockDataService
+from database_client import DatabaseClient
 
-# Configure logging
+# -----------------------------------------------------------------------------------
+
 logging.basicConfig(level=logging.INFO)
+
+db_client = DatabaseClient('stock_data.db')  
+ap = StockDataService(db_client)
 
 
 class StockCalculations:
@@ -59,7 +68,77 @@ class StockCalculations:
         else:
             return (current_time - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    def get_performance(self, data, start_date=None):
+    def get_volume_for_ticker(self, data, ticker):
+        """
+        Processes volume data to compute rolling averages in reverse.
+        
+        Returns:
+            pd.DataFrame: A DataFrame containing dates as index and rolling average volumes as columns.
+        """
+        volume = pd.Series(data[ticker]['volume'])
+        dates = pd.Series(data[ticker]['date'])
+        
+        # Ensure there are no missing values in the volume data
+        volume.fillna(0, inplace=True)
+        
+        # Define the rolling windows
+        windows = {
+            'Vol 5D Avg': 5,
+            'Vol 3W Avg': 15,  
+            'Vol 1M Avg': 20,  
+            'Vol 3M Avg': 60,  
+            'Vol 1Y Avg': 252  
+        }
+
+        rolling_avgs = {}
+        for avg_name, window in windows.items():
+            rolling_avg = volume.rolling(window=window).mean()
+            rolling_avgs[avg_name] = rolling_avg
+
+        df = pd.DataFrame(rolling_avgs)
+        df['Date'] = dates.values  # Assign dates as a new column, not the index yet
+        df.dropna(how='all', inplace=True)
+        df.set_index('Date', inplace=True)
+        return df
+
+    def plot_rolling_avg_volumes(self, df, ticker):
+        """
+        Plots the rolling average volumes against dates using Plotly, selecting the last 3 years.
+
+        Parameters:
+            df (pd.DataFrame): DataFrame containing rolling average volumes with dates as index.
+            ticker (str): The ticker symbol for the title of the plot.
+        """
+        df.index = pd.to_datetime(df.index)
+
+        # Get today's date and filter for the last 3 years
+        end_date = pd.Timestamp.today()
+        start_date = end_date - pd.DateOffset(years=3)
+        
+        # Filter the DataFrame for the last 3 years
+        df_filtered = df.loc[start_date:end_date]
+
+        # Create a Plotly figure
+        fig = go.Figure()
+
+        # Add traces for each rolling average
+        for column in df_filtered.columns:
+            fig.add_trace(go.Scatter(x=df_filtered.index, y=df_filtered[column], mode='lines', name=column))
+
+        # Update the layout of the figure
+        fig.update_layout(
+            title=f'Rolling Average Volume for {ticker} (Last 3 Years)',
+            xaxis_title='Date',
+            yaxis_title='Volume',
+            hovermode='x unified',
+            template='plotly_dark'
+        )
+
+        # Show the figure
+        fig.show()
+
+
+    def get_performance(self, data):
         """
         Creates a DataFrame showing price changes over different time horizons in percentage terms.
         This version processes the nested dictionary input and only calculates price performance.
@@ -117,7 +196,55 @@ class StockCalculations:
             performance_data.append([ticker] + results)
         performance_df = pd.DataFrame(performance_data, columns=window_names)
         return performance_df.sort_values(by='Ticker').set_index('Ticker')
+    
+    def get_performance_vs_rolling_mean(self, data):
+        """
+        Creates a DataFrame showing price changes vs rolling averages over different time horizons in percentage terms.
+        This version processes the nested dictionary input and calculates performance relative to rolling means.
+        """
+        if not data:
+            raise ValueError("Input dictionary is empty. Cannot fetch data.")
 
+        window_names = ['Ticker', 'Price', '1W_avg', '3W_avg', '1M_avg', '3M_avg', '1Y_avg', '3Y_avg']
+        # window_names = ['1W_avg', '3W_avg', '1M_avg', '3M_avg', '1Y_avg', '3Y_avg']
+        end_date = self.get_end_date()
+        performance_data = []
+
+        windows = {
+            '1W': 5,
+            '3W': 15,
+            '1M': 21,
+            '3M': 63,
+            '1Y': 252,
+            '3Y': 756
+        }
+
+        for ticker, ticker_data in data.items():
+            dates = pd.to_datetime(ticker_data['date'])
+            close_prices = pd.Series(ticker_data['volume'], index=dates)
+            close_prices = close_prices[close_prices.index <= end_date]
+
+            if close_prices.empty:
+                continue
+            
+            latest_price = close_prices.iloc[-1]
+            # results = []
+            results = [ticker, latest_price.round(2)]
+            
+            for label, window in windows.items():
+                rolling_mean = close_prices.rolling(window=window).mean()
+                recent_mean = rolling_mean.iloc[-1] if not rolling_mean.empty else None
+                if recent_mean:
+                    performance_vs_avg = (latest_price - recent_mean) / recent_mean * 100
+                    results.append("{:.2f}%".format(performance_vs_avg))
+                else:
+                    results.append(None)
+
+            performance_data.append(results)
+
+        performance_df = pd.DataFrame(performance_data, columns=window_names).sort_values(by='Ticker').set_index('Ticker')
+        return performance_df.drop(columns='Price')
+    
     def get_one_year_range(self, index):
         one_year_ago = pd.Timestamp(dt.date.today() - dt.timedelta(weeks=52))
         return index >= one_year_ago
@@ -147,9 +274,6 @@ class StockCalculations:
         This function creates a pandas dataframe. In it, correlations (pearson method) between different contracts are being calculated and shown, over different time horizons.
         '''
         end_date = self.get_end_date()
-        # df.index = pd.to_datetime(df.index)
-        # df = df[df.index <= end_date] 
-
         window_list = [15, 30, 90, 120, 180]
         tickerlist = list(data.keys())
         TICKER = value
@@ -158,7 +282,6 @@ class StockCalculations:
         dataframe = pd.DataFrame()
         for window in window_list:
                 for i in MULTP_TICKERS:
-                    # Extract 'date' and 'close' for the TICKER and the comparison ticker
                     dates_ticker = pd.to_datetime(data[TICKER]['date'])
                     close_prices_ticker = pd.Series(data[TICKER]['close'], index=dates_ticker)
                     close_prices_ticker = close_prices_ticker[close_prices_ticker.index <= end_date]
@@ -167,11 +290,9 @@ class StockCalculations:
                     close_prices_i = pd.Series(data[i]['close'], index=dates_i)
                     close_prices_i = close_prices_i[close_prices_i.index <= end_date]
 
-                    # Align both series by their index (date) and drop any rows with NaN values
                     combined_data = pd.concat([close_prices_ticker, close_prices_i], axis=1).dropna()
                     combined_data.columns = [TICKER, i]
 
-                    # Calculate rolling correlation for the current window
                     dataframe[f'{TICKER}_{i}_{window}'] = combined_data[TICKER].rolling(window).corr(combined_data[i])
 
         day_15 = dataframe.filter(regex='15')
@@ -204,14 +325,19 @@ class StockCalculations:
         '''
         This function automates creation of scatterplots of correlations between tickers over different time horizons.
         '''
-        dt_3m = date.today() - pd.DateOffset(months=2)  
+        dt_3m = date.today() - pd.DateOffset(months=2)
         dataframe.index = pd.to_datetime(dataframe.index)
         dataframe = dataframe[dataframe.index >= dt_3m]
         
         time_horizons = ['15', '30', '90', '120', '180']
-        time_horizon_names = ['%sD' % (i) for i in time_horizons]
+        time_horizon_names = [f'{i}D' for i in time_horizons]
 
-        num_rows = int(np.ceil(len(time_horizons) / 2)) 
+        color_palette = plt.cm.tab20.colors 
+        colors = {ticker: f'rgba({int(r*255)}, {int(g*255)}, {int(b*255)}, 0.8)' 
+                  for ticker, (r, g, b) in zip(ticker_list, color_palette)}
+
+        # Initialize the figure with subplots
+        num_rows = int(np.ceil(len(time_horizons) / 2))
         fig = make_subplots(
             rows=num_rows, 
             cols=2,
@@ -219,22 +345,28 @@ class StockCalculations:
         )
 
         for idx, t in enumerate(time_horizons):
-            row = idx // 2 + 1 
-            col = idx % 2 + 1   
+            row = idx // 2 + 1
+            col = idx % 2 + 1
 
             for ticker in ticker_list:
                 if ticker != selected_ticker:
                     fig.add_trace(go.Scatter(
-                        x=dataframe['%s_%s_%s' % (selected_ticker, ticker, t)].index,
-                        y=dataframe['%s_%s_%s' % (selected_ticker, ticker, t)],
+                        x=dataframe[f'{selected_ticker}_{ticker}_{t}'].index,
+                        y=dataframe[f'{selected_ticker}_{ticker}_{t}'],
                         showlegend=False,
-                        name=ticker
+                        name=ticker,
+                        marker=dict(color=colors[ticker]) 
                     ), col=col, row=row)
+            fig.update_yaxes(range=[1,-1], title_text='rho', row=row, col=col)
+            fig.update_xaxes(title_text="date", row=row, col=col)
 
         fig.update_layout(
             autosize=True,
             height=1000,
+            title=f'{ticker} rolling correlations',
+            title_x=0.5
         )
+
         return fig
     
     def chart_rates_spreads(self, data, TICKER):
@@ -245,4 +377,78 @@ class StockCalculations:
         fig.add_trace(go.Scatter(x=x, y=np.array(data), name=TICKER))
         fig.update_xaxes(title='date')
         fig.update_yaxes(title='performance')
+        return fig
+
+    def generate_returns_graph(self, selected_ticker, start_date, end_date):
+        data, _ = asyncio.run(ap.get_prices_for_tickers([selected_ticker], start_date, end_date))
+        date = pd.to_datetime(data[selected_ticker]['date'])
+        returns = data[selected_ticker]['close']
+        df = pd.DataFrame({'date': date, 'returns': returns}).set_index('date')
+
+        if start_date:
+            df = df[df.index >= pd.Timestamp(start_date)]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=df.index,
+            y=df['returns'],
+            mode='lines',
+            name='Returns'
+        ))
+
+        # Update layout with an x-axis range slider
+        fig.update_layout(
+            xaxis=dict(
+                title="Date",
+            ),
+            yaxis=dict(
+                title="Returns",
+                autorange=True  # Enable autoscaling for the y-axis
+            ),
+            height=550
+        )
+        return fig
+
+    def create_volume_and_rolling_avg_graph(self, selected_ticker, start_date, end_date):
+        # begin_data_date = (dt.date.today() - pd.DateOffset(years=10)).strftime('%Y-%m-%d') 
+        data, _ = asyncio.run(ap.get_prices_for_tickers([selected_ticker], start_date, end_date))
+        date = pd.to_datetime(data[selected_ticker]['date'])
+        volume = data[selected_ticker]['volume']
+        df = pd.DataFrame({'date': date, 'volume': volume}).set_index('date')
+
+        if start_date:
+            df = df[df.index >= pd.Timestamp(start_date)]
+
+        windows = {
+            '1W': 5,
+            '3W': 15,
+            '1M': 21,
+            '3M': 63,
+            '1Y': 252,
+            '3Y': 756
+        }
+
+        fig = go.Figure()
+        for label, window in windows.items():
+            rolling_avg = df['volume'].rolling(window=window).mean()
+            fig.add_trace(
+                go.Scatter(
+                    x=rolling_avg.index,
+                    y=rolling_avg.values,
+                    mode='lines',
+                    name=f"{label} Avg",
+                    # line=dict(dash='dash')
+                )
+            )
+        fig.update_layout(
+            # title=f"{selected_ticker} Volume and Rolling Averages",
+            xaxis=dict(
+                title="Date",
+            ),
+            yaxis=dict(
+                title="Volume",
+                autorange=True  # Enable autoscaling for the y-axis
+            ),
+            height=550
+        )
         return fig

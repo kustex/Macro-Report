@@ -11,12 +11,10 @@ class DatabaseClient:
         self.create_table()  
     
     def ensure_data_folder_exists(self):
-        # Create the 'data' directory if it doesn't exist
         if not os.path.exists(self.db_dir_name):
             os.makedirs(self.db_dir_name)
 
     def create_table(self):
-        # Create the table if it does not exist
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute(""" 
