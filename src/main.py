@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+import pandas as pd
 import time
 import os
 
@@ -17,7 +18,7 @@ ap = StockDataService(db_client)
 calc = StockCalculations()
 
 # Set date range
-start_date = ap.time_delta(2)
+start_date = (datetime.today() - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
 end_date = datetime.today().strftime('%Y-%m-%d')
 dir_t = 'res/tickers/'
 dir_t_corr = 'res/tickers_corr/' 
@@ -55,5 +56,5 @@ def start_scheduler():
     print("Scheduler started")
 
 if __name__ == '__main__':
-    start_scheduler()
-    app.run_server(host='0.0.0.0', port=5000, debug=False)
+    # start_scheduler()
+    app.run_server(host='0.0.0.0', port=5000, debug=True)

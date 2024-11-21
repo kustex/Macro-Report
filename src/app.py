@@ -1,5 +1,7 @@
 import asyncio
 import dash_bootstrap_components as dbc
+import dash
+import logging
 import os
 import pandas as pd
 import plotly.graph_objects as go
@@ -9,8 +11,11 @@ from dash.dependencies import Input, Output
 from dash.dash_table import DataTable
 from calculations import StockCalculations 
 from stock_data_service import StockDataService
+from layout import *
 from database_client import DatabaseClient
 from datetime import datetime
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Initialize global instances for database and services
 db_client = DatabaseClient('stock_data.db')  
@@ -18,241 +23,23 @@ ap = StockDataService(db_client)
 calc = StockCalculations()
 
 # Set date range
-start_date = ap.time_delta(2)
+start_date = (datetime.today() - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
 end_date = datetime.today().strftime('%Y-%m-%d')
-
-# Define lists for dropdown options
-extension = 'csv'
-files = os.listdir('res/tickers')
-files = sorted([i[:-4] for i in files])
-corr_tickers = pd.read_csv('res/tickers_corr/correlations_etfs.csv')['Ticker'].tolist()
-
-rates_spreads_tickers = ['2Y-10Y Spread', '5Y Breakeven', 'HY-OAS', 'IG Spread', 'High Yield', '3M t-bill', '2Y t-note', '5Y t-note', '10Y t-note', '30Y t-note']
-timeframes = ['1Y', '5Y', '10Y', 'MAX']
 
 # Initialize the app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 app.title = "Macro Report"
 
-# Define the Sidebar
-sidebar = html.Div(
-    [
-        html.H2("Macro Report", className="display-4"),
-        html.Hr(),
-        dbc.Nav(
-            [
-                dbc.NavLink("Performance", href="/performance", id="performance-link", active="exact"),
-                dbc.NavLink("Correlations", href="/correlations", id="correlations-link", active="exact"),
-                dbc.NavLink("Risk Metrics", href="/risk-metrics", id="risk-metrics-link", active="exact"),
-            ],
-            vertical=True,
-            pills=True,
-        ),
-    ],
-    style={
-        "position": "fixed",
-        "top": 0,
-        "left": 0,
-        "bottom": 0,
-        "width": "16rem",
-        "padding": "2rem 1rem",
-        "background-color": "#f8f9fa",
-    },
-)
-
 # Define the Content Area
 content = html.Div(id="page-content", style={"margin-left": "18rem", "padding": "2rem 1rem"})
 
-# Define the app layout
-app.layout = html.Div([dcc.Location(id='url', refresh=False), sidebar, content])
-
-performance_layout = html.Div([
-    dbc.Container([
-        # Dropdown for selecting stock group
-        dbc.Row([
-            dbc.Col([
-                dcc.Dropdown(
-                    options=[{'label': x, 'value': x} for x in files],
-                    value='sectors',  # Default value
-                    id='ticker_dropdown',
-                    clearable=False,
-                ),
-                html.Br(),
-            ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
-        ]),
-        html.Br(),
-        # Row for Returns Table and Returns Graph
-        dbc.Row([
-            # First Column: Returns Table
-            dbc.Col([
-                html.H4("Returns Table", style={'textAlign': 'center'}),
-                html.Br(),
-                dcc.Loading(
-                    type='circle',
-                    id='loading-performance-table',
-                    children=[
-                        DataTable(
-                            id='returns_table',
-                            columns=[],
-                            data=[],
-                            row_selectable='single',
-                            selected_rows=[0],
-                            style_table={'overflowX': 'auto', 'height': '400px'},  # Ensure full height visibility
-                            style_cell={'textAlign': 'center'}
-                        )
-                    ],
-                ),
-            ], width=6),  # Fixed width for Returns Table
-            # Second Column: Returns Graph
-            dbc.Col([
-                html.H4("Returns Graph", style={'textAlign': 'center'}),
-                html.Br(),
-                dbc.Row([
-                    dbc.Col([
-                        dcc.Dropdown(
-                            options=[
-                                {'label': '1 Month', 'value': '1m'},
-                                {'label': '3 Months', 'value': '3m'},
-                                {'label': '6 Months', 'value': '6m'},
-                                {'label': '1 Year', 'value': '1y'},
-                                {'label': '3 Years', 'value': '3y'},
-                                {'label': 'All History', 'value': 'all'}
-                            ],
-                            value='1y',  # Default lookback period
-                            id='lookback_dropdown',
-                            placeholder="Select Lookback Period",
-                            clearable=False
-                        ),
-                    ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
-                ]),
-                dcc.Loading(
-                    type='circle',
-                    id='loading-performance-graph',
-                    children=[dcc.Graph(id='returns_graph', style={'height': '400px'})],
-                ),
-            ], width=6),  # Fixed width for Returns Graph
-        ]),
-        html.Br(),
-        # Row for Volume Table and Volume Graph
-        dbc.Row([
-            # Volume Table
-            dbc.Col([
-                html.H4("Volume Table", style={'textAlign': 'center'}),
-                html.Br(),
-                dcc.Loading(
-                    type='circle',
-                    id='loading-performance-volume-table',
-                    children=[
-                        DataTable(
-                            id='volume_table',
-                            columns=[],
-                            data=[],
-                            row_selectable='single',
-                            selected_rows=[0],
-                            style_table={'overflowX': 'auto', 'height': '400px'},  # Ensure full height visibility
-                            style_cell={'textAlign': 'center'}
-                        )
-                    ],
-                ),
-            ], width=6),  # Fixed width for Volume Table
-            # Volume Graph
-            dbc.Col([
-                html.H4("Volume Graph", style={'textAlign': 'center'}),
-                html.Br(),
-                dbc.Row([
-                    dbc.Col([
-                        dcc.Dropdown(
-                            options=[
-                                {'label': '1 Month', 'value': '1m'},
-                                {'label': '3 Months', 'value': '3m'},
-                                {'label': '6 Months', 'value': '6m'},
-                                {'label': '1 Year', 'value': '1y'},
-                                {'label': '3 Years', 'value': '3y'},
-                                {'label': 'All History', 'value': 'all'}
-                            ],
-                            value='1y',  # Default lookback period
-                            id='lookback_dropdown_volume',
-                            placeholder="Select Lookback Period",
-                            clearable=False
-                        ),
-                    ], width=12, style={'margin': '0 auto', 'textAlign': 'center'}),
-                ]),
-                dcc.Loading(
-                    type='circle',
-                    id='loading-graph-volume-graph',
-                    children=[dcc.Graph(id='volume_graph', style={'height': '400px'})],
-                ),
-            ], width=6),  # Fixed width for Volume Graph
-        ])
-    ], fluid=True)  # Ensures container spans full width
-])
-
-# Risk Metrics Layout
-risk_metrics_layout = html.Div([
-    dbc.Container([
-        dbc.Row([
-            dbc.Col([
-                html.Br(),
-                html.H2('Rates and Spreads', style={'textAlign': 'center'}),
-                html.Br(),
-                dbc.Row([
-                    dbc.Col([
-                        dcc.Dropdown(
-                            id='input_rates_spreads',
-                            options=[{'label': x, 'value': x} for x in rates_spreads_tickers],
-                            value='2Y-10Y Spread'
-                        ),
-                    ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}),
-                ]),
-                html.Br(),
-                html.Br(),
-                dcc.Loading(
-                    type='circle',
-                    id='loading-rates-spreads-chart',
-                    children=[dcc.Graph(id='chart_rates_spreads')],
-                ),
-                html.Br(),
-                dcc.Loading(
-                    type='circle',
-                    id='loading-rates-spreads-performance',
-                    children=[html.Div(id='rates_spreads_performance')],
-                )
-            ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'})
-        ], align='center')
-    ])
-])
-
-# Correlations Layout
-correlations_layout = html.Div([
-    html.Br(),
-    html.H2(children='Correlations', style={'textAlign': 'center'}),
-    html.Br(),
-    dbc.Row([
-        dbc.Col([
-            dcc.Dropdown(
-                options=[{'label': x, 'value': x} for x in corr_tickers],
-                value='UUP',
-                id='ticker_dropdown_correlations'
-            ),
-            html.Br(),
-            html.Br(),
-            dcc.Loading(
-                    type='circle',
-                id='loading-correlation-table',
-                children=[html.Div(id='dd_output_container_correlations')],
-            )
-        ], style={'textAlign': 'center', 'marginLeft':'auto', 'marginRight': 'auto'}, width={"size": 7}),
-    ]),
-    dbc.Row([
-        dbc.Col([
-            html.Br(),
-            dcc.Loading(
-                type='circle',
-                id='loading-correlation-graphs',
-                children=[dcc.Graph(id='dd_output_container_correlation_graphs')],
-            )
-        ])
-    ], align='center')
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    sidebar,
+    content,
+    dcc.Store(id='data_store'),  
+    dcc.Store(id='data_correlation_store'),  
+    dcc.Store(id='rates_spreads_store')  
 ])
 
 @app.callback(
@@ -277,30 +64,27 @@ def display_page(pathname):
     Input('url', 'pathname')
 )
 def update_active_links(pathname):
-    # Treat `/` as `/performance` for highlighting
     return (
-        pathname in ['/', '/performance'],  # Highlight performance for `/` or `/performance`
+        pathname in ['/', '/performance'],  
         pathname == '/correlations',
         pathname == '/risk-metrics'
     )
 
 @app.callback(
     Output('returns_graph', 'figure'),
-    [Input('lookback_dropdown', 'value'),  # Lookback period
-     Input('returns_table', 'selected_rows'),  # Row selection
-     Input('returns_table', 'data')]  # Table data
+    [Input('lookback_dropdown', 'value'),  
+     Input('returns_table', 'selected_rows'),  
+     Input('returns_table', 'data')]  
 )
-def update_returns_graph(lookback_period, selected_rows, table_data):
+def update_returns_graph(lookback_period, selected_rows, stored_data):
     """
     Updates the returns graph based on the selected row and lookback period.
     """
-    if not selected_rows or not table_data:
-        return go.Figure()  # Return an empty figure if no row is selected
+    if not selected_rows or not stored_data:
+        return go.Figure()  
+    df = pd.DataFrame(stored_data)
+    selected_ticker = df.iloc[selected_rows[0]]['Ticker']
 
-    # Get the selected ticker
-    selected_ticker = table_data[selected_rows[0]]['Ticker']
-
-    # Determine the start date based on the lookback period
     today = datetime.today()
     if lookback_period == '1m':
         start_date = today - pd.DateOffset(weeks=4)
@@ -313,32 +97,27 @@ def update_returns_graph(lookback_period, selected_rows, table_data):
     elif lookback_period == '3y':
         start_date = today - pd.DateOffset(years=3)
     elif lookback_period == 'all':
-        start_date = None  # No filtering for all history
+        start_date = None 
 
-    # Convert start_date to string if not None
-    if start_date is not None:
-        start_date = start_date.strftime('%Y-%m-%d')  # Format as 'YYYY-MM-DD'
+    if start_date:
+        start_date = start_date.strftime('%Y-%m-%d')
 
-    # Generate the graph
     return calc.generate_returns_graph(selected_ticker, start_date, today.strftime('%Y-%m-%d'))
 
 @app.callback(
     Output('volume_graph', 'figure'),
-    [Input('lookback_dropdown_volume', 'value'),
-     Input('volume_table', 'selected_rows'),
-     Input('volume_table', 'data')]
+    [Input('lookback_dropdown_volume', 'value'),  
+     Input('volume_table', 'selected_rows'), 
+     Input('volume_table', 'data')]  
 )
-def update_volume_graph(lookback_period, selected_rows, table_data):
+def update_volume_graph(lookback_period, selected_rows, stored_data):
     """
     Updates the volume and rolling average graph based on the selected row and lookback period.
     """
-    if not selected_rows or not table_data:
-        return go.Figure()  # Return an empty figure if no row is selected
-
-    # Get the selected ticker
-    selected_ticker = table_data[selected_rows[0]]['Ticker']
-
-    # Determine the start date based on the lookback period
+    if not selected_rows or not stored_data:
+        return go.Figure()  
+    df = pd.DataFrame(stored_data)
+    selected_ticker = df.iloc[selected_rows[0]]['Ticker']
     today = datetime.today()
     if lookback_period == '1m':
         start_date = today - pd.DateOffset(weeks=4)
@@ -351,92 +130,186 @@ def update_volume_graph(lookback_period, selected_rows, table_data):
     elif lookback_period == '3y':
         start_date = today - pd.DateOffset(years=3)
     elif lookback_period == 'all':
-        start_date = None  # No filtering for all history
+        start_date = None  
 
-    if start_date is not None:
-        start_date = start_date.strftime('%Y-%m-%d')  # Format as 'YYYY-MM-DD'
-
+    if start_date:
+        start_date = start_date.strftime('%Y-%m-%d')
     return calc.create_volume_and_rolling_avg_graph(selected_ticker, start_date, today.strftime('%Y-%m-%d'))
 
-async def fetch_volume_data(value):
-    dir = 'res/tickers/'  
-    tickers = ap.get_tickers(dir, f'{value}.csv')
-    data, _ = await ap.get_prices_for_tickers(tickers, start_date, end_date) 
-    df = calc.get_performance_vs_rolling_mean(data)
-    return df
-
 @app.callback(
-    [Output('volume_table', 'data'),
-     Output('volume_table', 'columns')],
-    [Input('ticker_dropdown', 'value')]
+    Output('data_store', 'data'),
+    Input('ticker_dropdown', 'value')
 )
-def update_volume_table(value):
-    """
-    Updates the volume table data and columns based on the selected stock group.
-    """
-    volume_data = asyncio.run(fetch_volume_data(value))
-    volume_data.reset_index(inplace=True)
-    columns = [{'name': col, 'id': col} for col in volume_data.columns]
-    return volume_data.round(2).to_dict('records'), columns
-
-async def fetch_performance_data(value):
+def update_performance_store(value):
+    logging.debug(f"Fetching data for {value}")
     dir = 'res/tickers/'
     tickers = ap.get_tickers(dir, f'{value}.csv')
-    df, _ = await ap.get_prices_for_tickers(tickers, start_date, end_date)
-    df_performance = calc.get_performance(df)
-    return df_performance
+    data, _ = ap.get_prices_for_tickers(tickers, start_date, end_date) 
+    return data  
 
 @app.callback(
     [Output('returns_table', 'data'),
      Output('returns_table', 'columns')],
-    [Input('ticker_dropdown', 'value')]
+    Input('data_store', 'data')
 )
-def update_performance_table(value):
-    performance_data = asyncio.run(fetch_performance_data(value))
-    performance_data.reset_index(inplace=True)
+def update_returns_table(data):
+    if data is None:
+        return [], []
+
+    df = calc.get_performance(data)
+    df.reset_index(inplace=True)
+    columns = [{'name': col, 'id': col} for col in df.columns]
+    return df.round(2).to_dict('records'), columns
+
+@app.callback(
+    [Output('volume_table', 'data'),
+     Output('volume_table', 'columns')],
+    Input('data_store', 'data')
+)
+def update_volume_table(data):
+    if data is None:
+        return [], []
+
+    df = calc.get_performance_vs_rolling_mean(data)
+    df.reset_index(inplace=True)
+    columns = [{'name': col, 'id': col} for col in df.columns]
+    return df.round(2).to_dict('records'), columns
+
+@app.callback(
+    Output('data_correlation_store', 'data'),
+    Input('ticker_dropdown_correlations', 'value')
+)
+def update_correlation_store(value):
+    logging.debug(f"Fetching data for {value}")
+    dir = 'res/tickers_corr/'
+    filename = 'correlations_etfs.csv'
+    tickers = ap.get_tickers(dir, filename) 
+    data, _ = ap.get_prices_for_tickers(tickers, start_date, end_date) 
+    return data 
+
+@app.callback(
+    Output('dd_output_container_correlations', 'children'),
+    [Input('ticker_dropdown_correlations', 'value'),
+    Input('data_correlation_store', 'data')]
+)
+def update_correlation_table(value, stored_data):
+    """
+    Update the correlation table for the selected ticker.
+    """
+    if stored_data is None:
+        logging.warning("No stored data available for the correlation table")
+        return html.Div("No data available", style={'textAlign': 'center'})
+    
+    # Fetch data for the selected ticker from the stored data
+    try:
+        data = pd.DataFrame(stored_data)
+        df_correlation, _ = calc.get_correlation_table_window_x(data, value)
+        correlation_table = dbc.Table.from_dataframe(df_correlation, bordered=True)
+        return correlation_table
+    except Exception as e:
+        logging.error(f"Error updating correlation table: {e}")
+        return html.Div("Error generating correlation table", style={'textAlign': 'center'})
+
+@app.callback(
+    Output('dd_output_container_correlation_graphs', 'figure'),
+    [Input('ticker_dropdown_correlations', 'value')],
+    [Input('data_correlation_store', 'data')]
+)
+def update_correlation_graph(value, stored_data):
+    """
+    Update the correlation graph for the selected ticker.
+    """
+    if stored_data is None:
+        logging.warning("No stored data available for the correlation graph")
+        # Return an empty figure if no data is available
+        return go.Figure()
+
+    try:
+        # Convert stored data into a DataFrame
+        dataframe = pd.DataFrame(stored_data)
+        ticker_list = list(dataframe.columns)
+        
+        # Generate the correlation graph
+        fig = calc.create_correlation_graph(dataframe, ticker_list, value)
+        return fig
+
+    except Exception as e:
+        logging.error(f"Error updating correlation graph: {e}")
+        # Return an empty figure in case of errors
+        return go.Figure()
+
+
+@app.callback(
+    Output('rates_spreads_store', 'data'),
+    Input('url', 'pathname')
+)
+def fetch_and_store_fred_data(pathname):
+    """
+    Fetch and store FRED data when the user navigates to the app.
+    """
+    if pathname == '/risk-metrics':  # Only fetch when viewing risk metrics
+        df = ap.get_rates_spreads_data()
+        return df
+    return dash.no_update
+
+@app.callback(
+    [Output('rates_table', 'data'),
+     Output('rates_table', 'columns')],
+    Input('rates_spreads_store', 'data')
+)
+def update_rates_table(stored_data):
+    """
+    Update the Rates Table based on the stored FRED data.
+    """
+    if not stored_data:
+        return [], []
+
+    df = pd.DataFrame(stored_data)
+    performance_data = calc.df_performance_rates_spreads(df)
+
     columns = [{'name': col, 'id': col} for col in performance_data.columns]
     return performance_data.round(2).to_dict('records'), columns
 
-async def fetch_performance_rates():
-    df = await ap.df_rates_spreads()
-    return df
-
 @app.callback(
-    Output('chart_rates_spreads', 'figure'),
-    [Input('input_rates_spreads', 'value')]
+    Output('rates_chart', 'figure'),
+    [Input('lookback_dropdown_rates', 'value'),
+     Input('rates_table', 'selected_rows'),
+     Input('rates_spreads_store', 'data')]
 )
-def chart_rates_spreads(value):
-    df = asyncio.run(fetch_performance_rates())
-    df = df.loc[:, value]
-    fig = calc.chart_rates_spreads(df, value)
-    return fig
+def update_rates_chart(lookback_period, selected_rows, store_data):
+    """
+    Updates the Rates chart based on the selected row and lookback period.
+    """
+    
+    df_stored = pd.DataFrame.from_dict(store_data)
+    tickers = [col for col in df_stored.columns if col != 'date']  # All tickers
+    selected_ticker = tickers[selected_rows[0]] if selected_rows else None
 
-@app.callback(
-    Output('rates_spreads_performance', 'children'),
-    [Input('input_rates_spreads', 'value')]
-)
-def update_rates_spreads_performance(value):
-    df = asyncio.run(fetch_performance_rates())
-    data = calc.df_performance_rates_spreads(df)
-    return dbc.Table.from_dataframe(data.round(2), bordered=True)
+    df = pd.DataFrame()
+    df.index = pd.to_datetime(df_stored[selected_ticker].loc['date'])
+    print(df.index)
+    df['close'] = df_stored[selected_ticker].loc['close']
 
-async def fetch_correlation_data(value):
-    dir = 'res/tickers_corr/'
-    tickers = ap.get_tickers(dir, 'correlations_etfs.csv')
-    df, ticker_list = await ap.get_prices_for_tickers(tickers, start_date, end_date)
-    df_correlation, dataframe = calc.get_correlation_table_window_x(df, value)
-    correlation_table = dbc.Table.from_dataframe(df_correlation, bordered=True)
-    fig = calc.create_correlation_graph(dataframe, ticker_list, value)
-    return correlation_table, fig
+    # Apply the lookback filter
+    today = datetime.today()
+    if lookback_period == '1m':
+        start_date = today - pd.DateOffset(weeks=4)
+    elif lookback_period == '3m':
+        start_date = today - pd.DateOffset(weeks=12)
+    elif lookback_period == '6m':
+        start_date = today - pd.DateOffset(weeks=24)
+    elif lookback_period == '1y':
+        start_date = today - pd.DateOffset(years=1)
+    elif lookback_period == '3y':
+        start_date = today - pd.DateOffset(years=3)
+    elif lookback_period == 'all':
+        start_date = None
+    else:
+        raise ValueError(f"Invalid lookback period: {lookback_period}")
 
-# Async callback for correlation data
-@app.callback(
-    [Output('dd_output_container_correlations', 'children'),
-     Output('dd_output_container_correlation_graphs', 'figure')],
-    [Input('ticker_dropdown_correlations', 'value')]
-)
-def update_correlations(value):
-    correlation_data = asyncio.run(fetch_correlation_data(value))
-    return correlation_data
+    # Filter data based on lookback period if applicable
+    df_filtered = df if start_date is None else df[df.index >= start_date]
+    print(df_filtered)
+    return calc.chart_rates_spreads(df_filtered)
 
 

@@ -33,37 +33,40 @@ class DatabaseClient:
             conn.commit()
 
     def data_exists(self, symbol, start_date, end_date):
+        """Check if data exists for a symbol within a date range."""
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
-            cursor.execute(""" 
+            cursor.execute("""
                 SELECT COUNT(*) FROM stock_data 
                 WHERE symbol = ? AND date BETWEEN ? AND ?
             """, (symbol, start_date, end_date))
             count = cursor.fetchone()[0]
         return count > 0
 
-    def fetch_prices(self, symbol):
+    def fetch_prices(self, symbol, start_date, end_date):
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute(""" 
                 SELECT date, close, volume FROM stock_data 
-                WHERE symbol = ? 
+                WHERE symbol = ? AND date BETWEEN ? AND ?
                 ORDER BY date
-            """, (symbol,))
+            """, (symbol, start_date, end_date))
             return pd.DataFrame(cursor.fetchall(), columns=['date', 'close', 'volume'])
 
-    def insert_stock_data(self, df):
+    def insert_stock_data(self, df, ticker):
+        df = df.copy()
+        df['symbol'] = ticker
         """Insert stock data into the database, avoiding duplicates."""
-        # Prepare the SQL command
         sql = """
             INSERT OR IGNORE INTO stock_data (symbol, date, open, high, low, close, volume)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """
-        # Convert 'date' column to string format if it's a Timestamp
-        df['date'] = df['date'].astype(str)  # Convert Timestamps to string
+        columns = ['symbol', 'date', 'open', 'high', 'low', 'close', 'volume']
+        df = df[columns]
+        df['date'] = df['date'].astype(str)
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
-            cursor.executemany(sql, df.values)
+            cursor.executemany(sql, df.values.tolist())
             conn.commit()
 
     def close(self):

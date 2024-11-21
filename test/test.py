@@ -23,20 +23,23 @@ def convert_datetime(s):
 sqlite3.register_adapter(datetime, adapt_datetime)
 sqlite3.register_converter("DATE", convert_datetime)
 
-async def main():
-    db_client = DatabaseClient('stock_data.db')  
-    ap = StockDataService(db_client)
+def main():
+    ap = StockDataService('stock_data.db')
     calc = StockCalculations()
-    dir = 'res/tickers/'
-    start_date = ap.time_delta(2)
-    end_date = datetime.today().strftime('%Y-%m-%d')
+    df = ap.get_rates_spreads_data()
 
-    tickers = ap.get_tickers(dir, 'sectors.csv')
-    dict, _ = await ap.get_prices_for_tickers(tickers, start_date, end_date)
-    ticker = 'SPY'
-    graph = calc.create_volume_and_rolling_avg_graph(dict, ticker)
-    print(graph)
+
+    df = pd.DataFrame.from_dict(df)
+    columns = df.columns.tolist()
+
+    for c in columns:
+        date = df[c].loc['date']
+        close = df[c].loc['close']
+        print(c, close)
+
+    # results = calc.df_performance_rates_spreads(df)
+    # print(results)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
