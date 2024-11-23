@@ -101,13 +101,19 @@ class StockCalculations:
             template='plotly_dark'
         )
 
-        # Show the figure
         fig.show()
+
+    def _get_previous_business_day(self, date):
+        """
+        Helper function to get the previous business day, considering weekends and holidays.
+        """
+        while date.weekday() > 4:  # Mon-Fri are 0-4
+            date -= pd.Timedelta(days=1)
+        return date
 
     def get_performance(self, data):
         """
         Creates a DataFrame showing price changes over different time horizons in percentage terms.
-        This version processes the nested dictionary input and calculates price performance.
         """
         if not data:
             raise ValueError("Input dictionary is empty. Cannot fetch data.")
@@ -120,20 +126,19 @@ class StockCalculations:
         performance_data = []
 
         # Define time periods
-        today = pd.Timestamp.now(tz=None)  # Ensure timezone-naive
+        today = pd.Timestamp.now(tz=None)
         periods = {
-            '1D': today - dt.timedelta(days=1),
-            '1W': today - dt.timedelta(weeks=1),
-            '3W': today - dt.timedelta(weeks=3),
-            '1M': today - dt.timedelta(days=30),
+            '1D': self._get_previous_business_day(today),  # Find the previous business day
+            '1W': today - pd.Timedelta(weeks=1),
+            '3W': today - pd.Timedelta(weeks=3),
+            '1M': today - pd.Timedelta(days=30),
             'MTD': today.replace(day=1),
-            '3M': today - dt.timedelta(days=90),
+            '3M': today - pd.Timedelta(days=90),
             'QTD': today.replace(month=(today.month - 1) // 3 * 3 + 1, day=1),
             'YTD': today.replace(month=1, day=1)
         }
 
         for ticker, ticker_data in data.items():
-            # Validate data
             if 'date' not in ticker_data or 'close' not in ticker_data:
                 logging.warning(f"Ticker {ticker} missing required data.")
                 continue
@@ -147,25 +152,44 @@ class StockCalculations:
                 logging.warning(f"No data available for ticker {ticker} up to {end_date}.")
                 continue
 
-            # Latest price
-            latest_price = close_prices.iloc[-1]
+            latest_price = close_prices.iloc[-1]  # Friday's price
+            latest_date = close_prices.index[-1]
             results = [latest_price.round(2)]
-            current_date = close_prices.index[-1]
 
-            # Calculate performance for each period
-            for period_name, period_date in periods.items():
+            # Special logic for 1D
+            if '1D' in periods:
+                previous_business_day = self._get_previous_business_day(latest_date - pd.Timedelta(days=1))
                 try:
-                    # Ensure period_date is timezone-naive
-                    period_date = pd.Timestamp(period_date).tz_localize(None)
-                    period_price = close_prices.loc[close_prices.index <= period_date].iloc[-1]
-                    change = (latest_price - period_price) / period_price
-                    results.append(f"{change:.2%}")
-                except (IndexError, KeyError):
+                    previous_prices = close_prices.loc[close_prices.index <= previous_business_day]
+                    if not previous_prices.empty:
+                        previous_price = previous_prices.iloc[-1]  # Thursday's price
+                        change_1d = (latest_price - previous_price) / previous_price
+                        results.append(f"{change_1d:.2%}")
+                    else:
+                        results.append(None)
+                except Exception as e:
+                    logging.debug(f"Error calculating 1D for {ticker}: {e}")
+                    results.append(None)
+
+            # Handle other periods
+            for period_name, period_date in periods.items():
+                if period_name == '1D':  # Skip 1D; already calculated
+                    continue
+                try:
+                    previous_prices = close_prices.loc[close_prices.index <= period_date]
+                    if previous_prices.empty:
+                        results.append(None)
+                    else:
+                        period_price = previous_prices.iloc[-1]
+                        change = (latest_price - period_price) / period_price
+                        results.append(f"{change:.2%}")
+                except (IndexError, KeyError, ValueError) as e:
+                    logging.debug(f"Error calculating {period_name} for {ticker}: {e}")
                     results.append(None)
 
             # Yearly high/low
-            one_year_ago = current_date - pd.Timedelta(weeks=52)
-            one_year_data = close_prices.loc[one_year_ago:current_date]
+            one_year_ago = latest_date - pd.Timedelta(weeks=52)
+            one_year_data = close_prices.loc[one_year_ago:latest_date]
             yearly_high = one_year_data.max() if not one_year_data.empty else None
             yearly_low = one_year_data.min() if not one_year_data.empty else None
 

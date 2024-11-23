@@ -24,21 +24,10 @@ sqlite3.register_adapter(datetime, adapt_datetime)
 sqlite3.register_converter("DATE", convert_datetime)
 
 def main():
-    ap = StockDataService('stock_data.db')
-    calc = StockCalculations()
-    df = ap.get_rates_spreads_data()
+    import src.options_data_service as ods
 
+    
 
-    df = pd.DataFrame.from_dict(df)
-    columns = df.columns.tolist()
-
-    for c in columns:
-        date = df[c].loc['date']
-        close = df[c].loc['close']
-        print(c, close)
-
-    # results = calc.df_performance_rates_spreads(df)
-    # print(results)
 
 
 if __name__ == "__main__":

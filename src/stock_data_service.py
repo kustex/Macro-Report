@@ -26,7 +26,7 @@ class StockDataService:
         tickers_to_download = []
 
         for ticker in tickers:
-            if not self.db_client.data_exists(ticker, start_date, end_date):
+            if not self.db_client.data_exists(ticker):
                 tickers_to_download.append(ticker)
                 logging.info(f"Ticker {ticker} needs to be downloaded.")
             else:
