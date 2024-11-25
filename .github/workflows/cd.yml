@@ -61,7 +61,7 @@ jobs:
 
     - name: Run Data Fetcher Docker Container
       run: |
-        sudo docker run --rm smokepaus/data-fetcher:latest >> /var/log/data-fetcher.log 2>&1
+        sudo bash -c 'docker run --rm smokepaus/data-fetcher:latest >> /var/log/data-fetcher.log 2>&1'
 
     - name: Cleanup Docker
       run: sudo docker system prune -f --volumes
