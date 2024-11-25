@@ -9,7 +9,7 @@ on:
 jobs:
   deploy-macro-report:
     name: Deploy Macro Report App
-    runs-on: self-hosted  # Replace or add runner labels as needed (e.g., 'macro-runner')
+    runs-on: macro-runner 
 
     steps:
     - name: Check Docker Installation
