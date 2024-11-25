@@ -1,4 +1,3 @@
-import asyncio
 import dash_bootstrap_components as dbc
 import dash
 import logging
@@ -144,7 +143,7 @@ def update_performance_store(value):
     logging.debug(f"Fetching data for {value}")
     dir = 'res/tickers/'
     tickers = ap.get_tickers(dir, f'{value}.csv')
-    data, _ = ap.get_prices_for_tickers(tickers, start_date, end_date) 
+    data, _ = ap.fetch_prices_from_db(tickers, start_date, end_date) 
     return data  
 
 @app.callback(
@@ -184,7 +183,7 @@ def update_correlation_store(value):
     dir = 'res/tickers_corr/'
     filename = 'correlations_etfs.csv'
     tickers = ap.get_tickers(dir, filename) 
-    data, _ = ap.get_prices_for_tickers(tickers, start_date, end_date) 
+    data, _ = ap.fetch_prices_from_db(tickers, start_date, end_date) 
     return data 
 
 @app.callback(
@@ -287,7 +286,6 @@ def update_rates_chart(lookback_period, selected_rows, store_data):
 
     df = pd.DataFrame()
     df.index = pd.to_datetime(df_stored[selected_ticker].loc['date'])
-    print(df.index)
     df['close'] = df_stored[selected_ticker].loc['close']
 
     # Apply the lookback filter
@@ -309,7 +307,6 @@ def update_rates_chart(lookback_period, selected_rows, store_data):
 
     # Filter data based on lookback period if applicable
     df_filtered = df if start_date is None else df[df.index >= start_date]
-    print(df_filtered)
     return calc.chart_rates_spreads(df_filtered)
 
 

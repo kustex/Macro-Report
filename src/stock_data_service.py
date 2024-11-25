@@ -19,28 +19,17 @@ class StockDataService:
 
     def get_prices_for_tickers(self, tickers, start_date, end_date):
         """
-        Fetch closing prices, volume, and date for multiple tickers, avoiding unnecessary downloads 
-        by checking the database first, and return a nested dictionary.
+        Check and download the latest closing prices for the given tickers, 
+        then insert the data directly into the database. Does not fetch existing data from the database.
         """
-        nested_dict = {}
         tickers_to_download = []
-
         for ticker in tickers:
+            # Check if the database already has up-to-date data
             if not self.db_client.data_exists(ticker):
                 tickers_to_download.append(ticker)
                 logging.info(f"Ticker {ticker} needs to be downloaded.")
             else:
-                df = self.db_client.fetch_prices(ticker, start_date, end_date)
-                if not df.empty:
-                    nested_dict[ticker] = {
-                        'date': df['date'].tolist(),
-                        'close': df['close'].tolist(),
-                        'volume': df['volume'].tolist(),
-                    }
-                    logging.info(f"Fetched closing prices for {ticker} from the database.")
-                else:
-                    logging.warning(f"No data found in the database for {ticker}. Adding to download queue.")
-                    tickers_to_download.append(ticker)
+                logging.info(f"Ticker {ticker} is already up-to-date.")
 
         if tickers_to_download:
             try:
@@ -52,6 +41,7 @@ class StockDataService:
                     group_by='ticker'
                 )
 
+                # If single ticker, adjust format
                 if isinstance(fetched_data, pd.DataFrame) and 'Date' in fetched_data.columns:
                     fetched_data = {tickers_to_download[0]: fetched_data}
 
@@ -67,24 +57,38 @@ class StockDataService:
                             'Volume': 'volume'
                         }, inplace=True)
                         df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+                        
+                        # Insert into database
                         self.db_client.insert_stock_data(df, ticker)
-
-                        nested_dict[ticker] = {
-                            'date': df['date'].tolist(),
-                            'close': df['close'].tolist(),
-                            'volume': df['volume'].tolist(),
-                        }
-                        logging.info(f"Downloaded and stored data for {ticker}.")
+                        logging.info(f"Downloaded and inserted data for {ticker}.")
                     else:
                         logging.warning(f"No data found for {ticker}.")
             except Exception as e:
                 logging.error(f"Error downloading data: {str(e)}")
-
-        if nested_dict:
-            logging.info("Successfully created nested dictionary for closing prices, volume, and date.")
         else:
-            logging.warning("No closing prices data available after processing.")
-        return nested_dict, tickers
+            logging.info("All tickers are already up-to-date.")
+
+        # No nested dictionary returned, as fetching is not needed here
+        return tickers_to_download
+
+
+    def fetch_prices_from_db(self, tickers, start_date, end_date):
+        """
+        Fetch closing prices, volume, and date for multiple tickers directly from the database.
+        """
+        nested_dict = {}
+        for ticker in tickers:
+            df = self.db_client.fetch_prices(ticker, start_date, end_date)
+            if not df.empty:
+                nested_dict[ticker] = {
+                    'date': df['date'].tolist(),
+                    'close': df['close'].tolist(),
+                    'volume': df['volume'].tolist(),
+                }
+                logging.info(f"Fetched data for {ticker} from the database.")
+            else:
+                logging.warning(f"No data found in the database for {ticker}.")
+        return nested_dict
 
     def get_tickers(self, dir, filename):
         """Retrieve tickers from a specified CSV file."""
