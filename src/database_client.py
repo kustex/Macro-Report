@@ -39,7 +39,7 @@ class DatabaseClient:
         for the given symbol, considering business days and time (CET).
         """
         now = datetime.now()
-        cet_offset = timedelta(hours=1)  # Adjust to CET
+        cet_offset = timedelta(hours=1)  
         current_cet_time = now + cet_offset
 
         # Determine the latest expected date

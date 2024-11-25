@@ -143,7 +143,7 @@ def update_performance_store(value):
     logging.debug(f"Fetching data for {value}")
     dir = 'res/tickers/'
     tickers = ap.get_tickers(dir, f'{value}.csv')
-    data, _ = ap.fetch_prices_from_db(tickers, start_date, end_date) 
+    data = ap.fetch_prices_from_db(tickers, start_date, end_date) 
     return data  
 
 @app.callback(
@@ -183,7 +183,7 @@ def update_correlation_store(value):
     dir = 'res/tickers_corr/'
     filename = 'correlations_etfs.csv'
     tickers = ap.get_tickers(dir, filename) 
-    data, _ = ap.fetch_prices_from_db(tickers, start_date, end_date) 
+    data = ap.fetch_prices_from_db(tickers, start_date, end_date) 
     return data 
 
 @app.callback(

@@ -432,7 +432,7 @@ class StockCalculations:
 
 
     def generate_returns_graph(self, selected_ticker, start_date, end_date):
-        data, _ = ap.get_prices_for_tickers([selected_ticker], start_date, end_date)
+        data = ap.fetch_prices_from_db([selected_ticker], start_date, end_date)
         date = pd.to_datetime(data[selected_ticker]['date'])
         returns = data[selected_ticker]['close']
         df = pd.DataFrame({'date': date, 'returns': returns}).set_index('date')
@@ -461,7 +461,7 @@ class StockCalculations:
         return fig
 
     def create_volume_and_rolling_avg_graph(self, selected_ticker, start_date, end_date):
-        data, _ = ap.get_prices_for_tickers([selected_ticker], start_date, end_date)
+        data = ap.fetch_prices_from_db([selected_ticker], start_date, end_date)
         date = pd.to_datetime(data[selected_ticker]['date'])
         volume = data[selected_ticker]['volume']
         df = pd.DataFrame({'date': date, 'volume': volume}).set_index('date')
