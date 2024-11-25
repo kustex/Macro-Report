@@ -7,33 +7,62 @@ on:
       - completed
 
 jobs:
-  build:
-    runs-on: self-hosted
+  deploy-macro-report:
+    name: Deploy Macro Report App
+    runs-on: self-hosted  # Replace or add runner labels as needed (e.g., 'macro-runner')
 
     steps:
     - name: Check Docker Installation
       run: sudo docker info || echo "Docker is not available"
 
-    - name: Prune unused Docker resources
-      run: sudo docker system prune -af  
+    - name: Login to Docker Hub
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: echo "$DOCKER_PASSWORD" | sudo docker login -u "$DOCKER_USERNAME" --password-stdin
 
-    - name: Pull Docker image
+    - name: Prune Unused Docker Resources
+      run: sudo docker system prune -af
+
+    - name: Pull Macro Report Docker Image
       run: sudo docker pull smokepaus/macro-report:latest
 
-    - name: List Docker images
-      run: sudo docker images
-
-    - name: Stop and remove any existing containers
+    - name: Stop and Remove Existing Macro Report Container
       run: |
         sudo docker stop macro-report-container || true
         sudo docker rm macro-report-container || true
 
-    - name: Run Docker container
+    - name: Run Macro Report Docker Container
       run: |
         sudo docker run -d -p 80:5000 --name macro-report-container smokepaus/macro-report:latest
-    
-    - name: Prune dangling images
-      run: sudo docker image prune -f  
 
-    - name: Cleanup Docker volumes
-      run: sudo docker system prune -f --volumes  
+    - name: Cleanup Docker
+      run: sudo docker system prune -f --volumes
+
+  deploy-data-fetcher:
+    name: Deploy Data Fetcher
+    runs-on: data-fetcher-runner
+
+    steps:
+    - name: Check Docker Installation
+      run: sudo docker info || echo "Docker is not available"
+
+    - name: Login to Docker Hub
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: echo "$DOCKER_PASSWORD" | sudo docker login -u "$DOCKER_USERNAME" --password-stdin
+
+    - name: Prune Unused Docker Resources
+      run: sudo docker system prune -af
+
+    - name: Pull Data Fetcher Docker Image
+      run: sudo docker pull smokepaus/data-fetcher:latest
+
+    - name: Run Data Fetcher Docker Container
+      run: |
+        sudo docker run --rm smokepaus/data-fetcher:latest
+
+    - name: Cleanup Docker
+      run: sudo docker system prune -f --volumes
+
