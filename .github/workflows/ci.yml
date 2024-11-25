@@ -30,7 +30,7 @@ jobs:
 
     # Build and Push Data Fetcher Image
     - name: Build Data Fetcher Docker Image
-      run: docker build -t smokepaus/data-fetcher:latest -f Docker/data-fetcher.Dockerfile .
+      run: docker build -t smokepaus/data-fetcher:latest -f Docker/data_fetcher.Dockerfile .
 
     - name: Push Data Fetcher Docker Image
       run: docker push smokepaus/data-fetcher:latest
