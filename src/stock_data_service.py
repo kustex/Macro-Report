@@ -18,58 +18,97 @@ class StockDataService:
 
     def get_prices_for_tickers(self, tickers, start_date, end_date):
         """
-        Check and download the latest closing prices for the given tickers, 
-        then insert the data directly into the database. Does not fetch existing data from the database.
+        Download and store data for the given tickers in one batch.
         """
-        tickers_to_download = []
-        for ticker in tickers:
-            # Check if the database already has up-to-date data
-            if not self.db_client.data_exists(ticker):
-                tickers_to_download.append(ticker)
-                logging.info(f"Ticker {ticker} needs to be downloaded.")
-            else:
-                logging.info(f"Ticker {ticker} is already up-to-date.")
+        # Step 1: Identify tickers that need downloading
+        tickers_to_download = [
+            ticker for ticker in tickers if not self.db_client.data_exists(ticker)
+        ]
+        logging.info(f"Tickers to download: {tickers_to_download}")
 
-        if tickers_to_download:
-            try:
-                fetched_data = yf.download(
-                    tickers=tickers_to_download, 
-                    start=start_date, 
-                    end=end_date, 
-                    progress=False, 
-                    group_by='ticker'
-                )
-
-                # If single ticker, adjust format
-                if isinstance(fetched_data, pd.DataFrame) and 'Date' in fetched_data.columns:
-                    fetched_data = {tickers_to_download[0]: fetched_data}
-
-                for ticker in tickers_to_download:
-                    if ticker in fetched_data:
-                        df = fetched_data[ticker].reset_index()
-                        df.rename(columns={
-                            'Date': 'date',
-                            'Open': 'open',
-                            'High': 'high',
-                            'Low': 'low',
-                            'Close': 'close',
-                            'Volume': 'volume'
-                        }, inplace=True)
-                        df['date'] = df['date'].dt.strftime('%Y-%m-%d')
-                        
-                        # Insert into database
-                        self.db_client.insert_stock_data(df, ticker)
-                        logging.info(f"Downloaded and inserted data for {ticker}.")
-                    else:
-                        logging.warning(f"No data found for {ticker}.")
-            except Exception as e:
-                logging.error(f"Error downloading data: {str(e)}")
-        else:
+        if not tickers_to_download:
             logging.info("All tickers are already up-to-date.")
+            return []
 
-        # No nested dictionary returned, as fetching is not needed here
+        # Step 2: Download data in one batch
+        data_dict = self.download_data_for_tickers(tickers_to_download, start_date, end_date)
+
+        # Step 3: Store data in the database
+        self.store_data_in_database(data_dict)
+
         return tickers_to_download
 
+
+    def download_data_for_tickers(self, tickers, start_date, end_date):
+        """
+        Download data for all tickers in one batch using yfinance.
+        Returns a dictionary of DataFrames where keys are ticker symbols.
+        """
+        try:
+            logging.info(f"Downloading data for tickers: {tickers}")
+
+            # Download data for all tickers in one batch
+            fetched_data = yf.download(
+                tickers=tickers,
+                start=start_date,
+                end=end_date,
+                progress=False,
+                group_by='ticker'
+            )
+
+            # If single ticker, adjust format
+            if isinstance(fetched_data, pd.DataFrame) and 'Date' in fetched_data.columns:
+                fetched_data = {tickers[0]: fetched_data}
+
+            data_dict = {}
+            for ticker in tickers:
+                if ticker in fetched_data:
+                    # Process the ticker's DataFrame
+                    df = fetched_data[ticker].reset_index()
+                    df.rename(columns={
+                        'Date': 'date',
+                        'Open': 'open',
+                        'High': 'high',
+                        'Low': 'low',
+                        'Close': 'close',
+                        'Volume': 'volume'
+                    }, inplace=True)
+
+                    # Ensure date is in string format
+                    df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+
+                    # Clean and validate data
+                    df = df[["date", "open", "high", "low", "close", "volume"]]
+                    df = df.astype({
+                        'open': 'float',
+                        'high': 'float',
+                        'low': 'float',
+                        'close': 'float',
+                        'volume': 'float'
+                    }, errors='ignore')  # Ignore if conversion isn't needed
+
+                    data_dict[ticker] = df
+                    logging.info(f"Successfully processed data for {ticker}.")
+                else:
+                    logging.warning(f"No data found for {ticker}. Skipping.")
+
+            return data_dict
+        except Exception as e:
+            logging.error(f"Error downloading data in batch: {e}")
+            return {}
+
+    def store_data_in_database(self, data_dict):
+        """
+        Store the downloaded data into MongoDB.
+        `data_dict` is a dictionary where keys are ticker symbols and values are DataFrames.
+        """
+        for ticker, df in data_dict.items():
+            try:
+                logging.info(f"Storing data for {ticker} in the database.")
+                self.db_client.insert_stock_data(df, ticker)
+                logging.info(f"Successfully stored data for {ticker}.")
+            except Exception as e:
+                logging.error(f"Error storing data for {ticker}: {e}")
 
     def fetch_prices_from_db(self, tickers, start_date, end_date):
         """

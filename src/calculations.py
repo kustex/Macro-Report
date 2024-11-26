@@ -19,7 +19,7 @@ from database_client import DatabaseClient
 
 logging.basicConfig(level=logging.INFO)
 
-db_client = DatabaseClient('stock_data.db')  
+db_client = DatabaseClient(db_name="macro_report")
 ap = StockDataService(db_client)
 
 

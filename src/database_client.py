@@ -1,16 +1,25 @@
+import pandas as pd
+import logging
+
 from pymongo import MongoClient, UpdateOne
 from datetime import datetime
-import pandas as pd
 
+logging.basicConfig(level=logging.INFO)
+
+
+# ---------------------------------------------------------------------------------------
 
 class DatabaseClient:
     def __init__(self, mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report"):
+    # def __init__(self, db_name="macro_report"):
         """
         Initialize the MongoDB client and specify the database and collection.
         """
-        self.client = MongoClient(mongo_uri)
+        self.client = MongoClient("mongodb://localhost:27017")
+        # self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.collection = self.db["stock_data"]
+        self.collection.create_index([("symbol", 1), ("date", 1)], unique=True)
 
     def data_exists(self, symbol):
         """
@@ -21,7 +30,7 @@ class DatabaseClient:
             return False
 
         # Check if the latest date matches the expected business day
-        now = datetime.utcnow()
+        now = datetime.now()
         expected_date = pd.date_range(end=now, periods=1, freq="B")[-1].date()
         return latest_entry["date"] == expected_date.strftime("%Y-%m-%d")
 
@@ -38,32 +47,34 @@ class DatabaseClient:
         )
         return pd.DataFrame(list(cursor))
 
-    def insert_stock_data(self, df, ticker):
+    def insert_stock_data(self, df, ticker, batch_size=1000):
         """
-        Insert stock data into MongoDB, avoiding duplicates.
+        Insert stock data into MongoDB in batches, avoiding duplicates.
         """
-        operations = []
-        for _, row in df.iterrows():
-            operations.append(
-                UpdateOne(
-                    {"symbol": ticker, "date": row["date"]},
-                    {
-                        "$set": {
-                            "symbol": ticker,
-                            "date": row["date"],
-                            "open": row["open"],
-                            "high": row["high"],
-                            "low": row["low"],
-                            "close": row["close"],
-                            "volume": row["volume"],
-                        }
-                    },
-                    upsert=True,
-                )
-            )
+        if df.empty:
+            logging.warning(f"No data to insert for {ticker}.")
+            return
 
-        if operations:
-            self.collection.bulk_write(operations)
+        try:
+            # Convert DataFrame to list of dictionaries
+            records = df.to_dict(orient="records")
+
+            # Prepare bulk update operations
+            operations = [
+                UpdateOne(
+                    {"symbol": ticker, "date": record["date"]},
+                    {"$set": record},
+                    upsert=True
+                )
+                for record in records
+            ]
+
+            # Execute bulk operations in batches
+            for i in range(0, len(operations), batch_size):
+                self.collection.bulk_write(operations[i:i + batch_size])
+        except Exception as e:
+            logging.error(f"Error storing data for {ticker}: {e}")
+
 
     def close(self):
         """
