@@ -59,10 +59,12 @@ jobs:
     - name: Pull Data Fetcher Docker Image
       run: sudo docker pull smokepaus/data-fetcher:latest
 
+    - name: Stop and Remove Existing Data Fetcher Container
+      run: |
+        sudo docker stop data-fetcher-container || true
+        sudo docker rm data-fetcher-container || true
+
     - name: Run Data Fetcher Docker Container
       run: |
-        sudo bash -c 'docker run --rm smokepaus/data-fetcher:latest >> /var/log/data-fetcher.log 2>&1'
-
-    - name: Cleanup Docker
-      run: sudo docker system prune -f --volumes
+        sudo docker run --name data-fetcher-container -d smokepaus/data-fetcher:latest
 
