@@ -15,8 +15,8 @@ class DatabaseClient:
         """
         Initialize the MongoDB client and specify the database and collection.
         """
-        self.client = MongoClient("mongodb://localhost:27017")
-        # self.client = MongoClient(mongo_uri)
+        # self.client = MongoClient("mongodb://localhost:27017")
+        self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.collection = self.db["stock_data"]
         self.collection.create_index([("symbol", 1), ("date", 1)], unique=True)
