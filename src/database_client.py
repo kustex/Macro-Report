@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 # ---------------------------------------------------------------------------------------
 
 class DatabaseClient:
-    def __init__(self, mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report"):
+    def __init__(self, mongo_uri="mongodb://ip-172-31-31-149.ec2.internal:27017", db_name="macro_report"):
     # def __init__(self, db_name="macro_report"):
         """
         Initialize the MongoDB client and specify the database and collection.
