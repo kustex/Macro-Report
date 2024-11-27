@@ -112,21 +112,20 @@ class StockDataService:
 
     def fetch_prices_from_db(self, tickers, start_date, end_date):
         """
-        Fetch closing prices, volume, and date for multiple tickers directly from the database.
+        Fetch prices for multiple tickers from the database.
+        Returns a dictionary of dictionaries.
         """
-        nested_dict = {}
+        data = {}
         for ticker in tickers:
-            df = self.db_client.fetch_prices(ticker, start_date, end_date)
-            if not df.empty:
-                nested_dict[ticker] = {
-                    'date': df['date'].tolist(),
-                    'close': df['close'].tolist(),
-                    'volume': df['volume'].tolist(),
-                }
-                logging.info(f"Fetched data for {ticker} from the database.")
+            ticker_data = self.db_client.fetch_prices(ticker, start_date, end_date)
+
+            # Ensure the structure is correct for empty data
+            if ticker_data["date"]:
+                data[ticker] = ticker_data
             else:
-                logging.warning(f"No data found in the database for {ticker}.")
-        return nested_dict
+                logging.warning(f"No data found for ticker {ticker} in the specified date range.")
+        
+        return data
 
     def get_tickers(self, dir, filename):
         """Retrieve tickers from a specified CSV file."""

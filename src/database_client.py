@@ -10,13 +10,13 @@ logging.basicConfig(level=logging.INFO)
 # ---------------------------------------------------------------------------------------
 
 class DatabaseClient:
-    def __init__(self, mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report"):
-    # def __init__(self, db_name="macro_report"):
+    # def __init__(self, mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report"):
+    def __init__(self, db_name="macro_report"):
         """
         Initialize the MongoDB client and specify the database and collection.
         """
-        # self.client = MongoClient("mongodb://localhost:27017")
-        self.client = MongoClient(mongo_uri)
+        self.client = MongoClient("mongodb://localhost:27017")
+        # self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.collection = self.db["stock_data"]
         self.collection.create_index([("symbol", 1), ("date", 1)], unique=True)
@@ -34,18 +34,34 @@ class DatabaseClient:
         expected_date = pd.date_range(end=now, periods=1, freq="B")[-1].date()
         return latest_entry["date"] == expected_date.strftime("%Y-%m-%d")
 
-    def fetch_prices(self, symbol, start_date, end_date):
+    def fetch_prices(self, symbol, start_date=None, end_date=None):
         """
         Fetch prices for a given symbol and date range from the database.
+        Returns a dictionary of lists for the symbol.
         """
+        query = {"symbol": symbol}
+        if start_date and end_date:
+            query["date"] = {"$gte": start_date, "$lte": end_date}
+
         cursor = self.collection.find(
-            {
-                "symbol": symbol,
-                "date": {"$gte": start_date, "$lte": end_date},
-            },
+            query,
             {"_id": 0, "date": 1, "open": 1, "high": 1, "low": 1, "close": 1, "volume": 1},
         )
-        return pd.DataFrame(list(cursor))
+
+        # Convert cursor to DataFrame and then to dictionary
+        df = pd.DataFrame(list(cursor))
+        if df.empty:
+            return {
+                "date": [],
+                "open": [],
+                "high": [],
+                "low": [],
+                "close": [],
+                "volume": []
+            }
+
+        # Convert DataFrame to dictionary of lists
+        return df.to_dict(orient="list")
 
     def insert_stock_data(self, df, ticker, batch_size=1000):
         """

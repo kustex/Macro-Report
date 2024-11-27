@@ -1,4 +1,3 @@
-import asyncio
 import datetime as dt
 import logging
 import matplotlib.pyplot as plt
@@ -430,76 +429,114 @@ class StockCalculations:
         fig.update_yaxes(title='Value')
         return fig
 
-
     def generate_returns_graph(self, selected_ticker, start_date, end_date):
+        # Fetch data
         data = ap.fetch_prices_from_db([selected_ticker], start_date, end_date)
-        date = pd.to_datetime(data[selected_ticker]['date'])
-        returns = data[selected_ticker]['close']
-        df = pd.DataFrame({'date': date, 'returns': returns}).set_index('date')
 
+        # Ensure data exists
+        if selected_ticker not in data or not data[selected_ticker]["date"]:
+            logging.warning(f"No data found for ticker {selected_ticker}.")
+            return go.Figure()
+
+        # Create DataFrame from fetched data
+        df = pd.DataFrame({
+            "date": pd.to_datetime(data[selected_ticker]["date"]),
+            "returns": data[selected_ticker]["close"]
+        }).set_index("date")
+
+        # Filter out zero or NaN returns
+        df = df[df["returns"] > 0].dropna()
+
+        # Filter by start_date if provided
         if start_date:
             df = df[df.index >= start_date]
 
+        # Create the graph
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=df.index,
-            y=df['returns'],
-            mode='lines',
-            name='Returns'
+            y=df["returns"],
+            mode="lines",
+            name="Returns"
         ))
 
-        # Update layout with an x-axis range slider
+        # Update layout
         fig.update_layout(
-            xaxis=dict(
-                title="Date",
-            ),
-            yaxis=dict(
-                title="Returns",
-                autorange=True  # Enable autoscaling for the y-axis
-            ),
+            xaxis=dict(title="Date"),
+            yaxis=dict(title="Returns", autorange=True)
         )
         return fig
 
     def create_volume_and_rolling_avg_graph(self, selected_ticker, start_date, end_date):
-        data = ap.fetch_prices_from_db([selected_ticker], start_date, end_date)
-        date = pd.to_datetime(data[selected_ticker]['date'])
-        volume = data[selected_ticker]['volume']
-        df = pd.DataFrame({'date': date, 'volume': volume}).set_index('date')
-        if start_date:
-            df = df[df.index >= start_date]
+        # Fetch data
+        data = ap.fetch_prices_from_db([selected_ticker], None, end_date)  # Fetch all data up to end_date
+        
+        # Ensure data exists for the selected ticker
+        if selected_ticker not in data or not data[selected_ticker]["date"]:
+            logging.warning(f"No data found for ticker {selected_ticker}.")
+            return go.Figure()
 
+        # Create DataFrame from fetched data
+        df = pd.DataFrame({
+            "date": pd.to_datetime(data[selected_ticker]["date"]),
+            "volume": data[selected_ticker]["volume"]
+        }).set_index("date")
+
+        # Filter out zero or NaN volumes
+        df = df[df["volume"] > 0].dropna()
+
+        # Define rolling windows
         windows = {
-            '1W': 5,
-            '3W': 15,
-            '1M': 21,
-            '3M': 63,
-            '1Y': 252,
-            '3Y': 756
+            "1W": 5,
+            "3W": 15,
+            "1M": 21,
+            "3M": 63,
+            "1Y": 252,
+            "3Y": 756
         }
 
+        # Calculate rolling averages on the entire dataset
+        rolling_averages = {
+            label: df["volume"].rolling(window=window).mean()
+            for label, window in windows.items()
+        }
+
+        # Filter by start_date for plotting
+        if start_date:
+            df = df[df.index >= start_date]
+            rolling_averages = {
+                label: avg[avg.index >= start_date]
+                for label, avg in rolling_averages.items()
+            }
+
+        # Create the figure
         fig = go.Figure()
-        for label, window in windows.items():
-            rolling_avg = df['volume'].rolling(window=window).mean()
+
+        # Add rolling average traces to the plot
+        for label, avg in rolling_averages.items():
             fig.add_trace(
                 go.Scatter(
-                    x=rolling_avg.index,
-                    y=rolling_avg.values,
-                    mode='lines',
-                    name=f"{label} Avg",
-                    # line=dict(dash='dash')
+                    x=avg.index,
+                    y=avg.values,
+                    mode="lines",
+                    name=f"{label} Avg"
                 )
             )
+
+        # Update layout
         fig.update_layout(
-            # title=f"{selected_ticker} Volume and Rolling Averages",
             xaxis=dict(
-                title="Date",
+                title="Date"
             ),
             yaxis=dict(
                 title="Volume",
-                autorange=True  # Enable autoscaling for the y-axis
-            ),
+                autorange=True
+            )
         )
+
         return fig
+
+
 
     def df_performance_rates_spreads(self, df):
         '''
