@@ -68,3 +68,6 @@ jobs:
       run: |
         sudo docker run --name data-fetcher-container -d smokepaus/data-fetcher:latest
 
+    - name: Cleanup Docker
+      run: sudo docker system prune -f --volumes
+
