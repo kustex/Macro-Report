@@ -10,13 +10,13 @@ logging.basicConfig(level=logging.INFO)
 # ---------------------------------------------------------------------------------------
 
 class DatabaseClient:
-    # def __init__(self, mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report"):
-    def __init__(self, db_name="macro_report"):
+    def __init__(self, mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report"):
+    # def __init__(self, db_name="macro_report"):
         """
         Initialize the MongoDB client and specify the database and collection.
         """
-        self.client = MongoClient("mongodb://localhost:27017")
-        # self.client = MongoClient(mongo_uri)
+        # self.client = MongoClient("mongodb://localhost:27017")
+        self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.collection = self.db["stock_data"]
         self.collection.create_index([("symbol", 1), ("date", 1)], unique=True)

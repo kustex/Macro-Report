@@ -6,8 +6,8 @@ from stock_data_service import StockDataService
 from database_client import DatabaseClient
 
 # Initialize MongoDB client
-# db_client = DatabaseClient(mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report")
-db_client = DatabaseClient(db_name="macro_report")
+db_client = DatabaseClient(mongo_uri="mongodb://ip-172-31-87-70.ec2.internal:27017", db_name="macro_report")
+# db_client = DatabaseClient(db_name="macro_report")
 ap = StockDataService(db_client)
 
 # Directory structure for tickers

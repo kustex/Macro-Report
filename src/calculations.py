@@ -9,8 +9,6 @@ import pytz
 from datetime import datetime, timedelta, date
 from plotly.subplots import make_subplots
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
-# from src.stock_data_service import StockDataService
-# from src.database_client import DatabaseClient
 from stock_data_service import StockDataService
 from database_client import DatabaseClient
 
