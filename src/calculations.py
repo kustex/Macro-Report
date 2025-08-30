@@ -9,15 +9,11 @@ import pytz
 from datetime import datetime, timedelta, date
 from plotly.subplots import make_subplots
 from pandas.api.types import is_datetime64_any_dtype as is_datetime
-from stock_data_service import StockDataService
-from database_client import DatabaseClient
+from src.services import ap, db_client
 
 # -----------------------------------------------------------------------------------
 
 logging.basicConfig(level=logging.INFO)
-
-db_client = DatabaseClient(db_name="macro_report")
-ap = StockDataService(db_client)
 
 
 class StockCalculations:
@@ -425,6 +421,10 @@ class StockCalculations:
         ))
         fig.update_xaxes(title='Date')
         fig.update_yaxes(title='Value')
+        # fig.update_layout(
+        #     # autosize=True
+        #     # width=1500
+        # )
         return fig
 
     def generate_returns_graph(self, selected_ticker, start_date, end_date):
@@ -533,8 +533,6 @@ class StockCalculations:
         )
 
         return fig
-
-
 
     def df_performance_rates_spreads(self, df):
         '''

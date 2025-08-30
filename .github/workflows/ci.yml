@@ -35,5 +35,4 @@ jobs:
     - name: Push Data Fetcher Docker Image
       run: docker push smokepaus/data-fetcher:latest
 
-    - name: Cleanup Docker
-      run: docker system prune -f --volumes
+

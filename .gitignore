@@ -1,4 +1,9 @@
 data/stock_data.db
+tests
+exploring
+macro_report
+macro_report.db
+data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

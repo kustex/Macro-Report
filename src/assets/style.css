@@ -1,0 +1,30 @@
+html, body, #root, #_dash-app-content { height: 100%; }
+body { margin: 0; }
+
+/* Fixed left sidebar (your “tabs”) */
+/* .sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 16rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  overflow-y: auto;
+} */
+
+/* Content area to the right that fills the screen */
+.content {
+  min-height: 100vh;
+  margin-left: 16rem;         /* same width as .sidebar */
+  padding: .75rem .75rem 1rem;
+  display: flex; flex-direction: column;
+}
+
+/* Page containers already sized in your layout; these keep things tidy */
+.page-wrap { padding-top: .25rem; padding-bottom: .5rem; }
+.min-h-0 { min-height: 0; }
+.card-body-grow { min-height: 0; }
+
+/* On small screens, let content take full width */
+@media (max-width: 991.98px) {
+  .content { margin-left: 0; }
+}

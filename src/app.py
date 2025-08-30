@@ -4,34 +4,41 @@ import logging
 import os
 import pandas as pd
 import plotly.graph_objects as go
-
-from dash import Dash, html, dcc, State
 from dash.dependencies import Input, Output
 from dash.dash_table import DataTable
-from calculations import StockCalculations 
-from stock_data_service import StockDataService
-from layout import *
-from database_client import DatabaseClient
+from dash import Dash
 from datetime import datetime
+from pathlib import Path
+
+from src.calculations import StockCalculations 
+from src.layout import *
+from src.services import ap, db_client
 
 logging.basicConfig(level=logging.DEBUG)
 
 # Initialize global instances for database and services
-db_client = DatabaseClient(mongo_uri="mongodb://ip-172-31-31-149.ec2.internal:27017", db_name="macro_report")
-# db_client = DatabaseClient(db_name="macro_report")
-ap = StockDataService(db_client)
+# db_client = DatabaseClient(mongo_uri="mongodb://ip-172-31-31-149.ec2.internal:27017", db_name="macro_report")
 calc = StockCalculations()
 
 # Set date range
 start_date = (datetime.today() - pd.DateOffset(years=10)).strftime('%Y-%m-%d')
 end_date = datetime.today().strftime('%Y-%m-%d')
 
+ASSETS = Path(__file__).parent / "assets"
+
 # Initialize the app
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+app = Dash(
+    __name__,
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    suppress_callback_exceptions=True,
+    assets_folder=str(ASSETS),   
+)
+
 app.title = "Macro Report"
 
 # Define the Content Area
-content = html.Div(id="page-content", style={"margin-left": "18rem", "padding": "2rem 1rem"})
+content = html.Div(id="page-content", className="content")
+
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -153,7 +160,7 @@ def update_performance_store(value):
     Input('data_store', 'data')
 )
 def update_returns_table(data):
-    if data is None:
+    if not data:
         return [], []
 
     df = calc.get_performance(data)
@@ -167,7 +174,7 @@ def update_returns_table(data):
     Input('data_store', 'data')
 )
 def update_volume_table(data):
-    if data is None:
+    if not data:
         return [], []
 
     df = calc.get_performance_vs_rolling_mean(data)
@@ -212,8 +219,8 @@ def update_correlation_table(value, stored_data):
 
 @app.callback(
     Output('dd_output_container_correlation_graphs', 'figure'),
-    [Input('ticker_dropdown_correlations', 'value')],
-    [Input('data_correlation_store', 'data')]
+    [Input('ticker_dropdown_correlations', 'value'),
+    Input('data_correlation_store', 'data')]
 )
 def update_correlation_graph(value, stored_data):
     """
@@ -309,5 +316,4 @@ def update_rates_chart(lookback_period, selected_rows, store_data):
     # Filter data based on lookback period if applicable
     df_filtered = df if start_date is None else df[df.index >= start_date]
     return calc.chart_rates_spreads(df_filtered)
-
 
