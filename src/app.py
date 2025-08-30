@@ -27,18 +27,23 @@ end_date = datetime.today().strftime('%Y-%m-%d')
 ASSETS = Path(__file__).parent / "assets"
 
 # Initialize the app
-app = Dash(
-    __name__,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    suppress_callback_exceptions=True,
-    assets_folder=str(ASSETS),   
-)
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP],
+           suppress_callback_exceptions=True,
+           assets_folder=str(ASSETS))
 
 app.title = "Macro Report"
 
 # Define the Content Area
-content = html.Div(id="page-content", className="content")
-
+content = html.Div(
+    id="page-content",
+    style={
+        "minHeight": "100vh",
+        "marginLeft": "16rem",   # must match sidebar width
+        "padding": ".75rem .75rem 1rem",
+        "display": "flex",
+        "flexDirection": "column",
+    },
+)
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),

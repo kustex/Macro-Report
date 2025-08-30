@@ -34,9 +34,20 @@ sidebar = html.Div(
             ],
             vertical=True,
             pills=True,
+            className="flex-column",   # hard-ensure vertical
         ),
     ],
-    className="sidebar",
+    style={
+        "position": "fixed",
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "width": "16rem",
+        "padding": "1rem",
+        "backgroundColor": "#f8f9fa",
+        "overflowY": "auto",
+        "zIndex": 1000,
+    },
 )
 
 # ---------- PERFORMANCE ----------
