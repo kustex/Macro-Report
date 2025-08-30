@@ -218,7 +218,11 @@ correlations_layout = html.Div(
                                 dcc.Loading(
                                     id="loading-correlation-table",
                                     type="circle",
-                                    children=[html.Div(id="dd_output_container_correlations")],
+                                    # ⬇️ give the table container a fixed height and let it scroll
+                                    children=[html.Div(
+                                        id="dd_output_container_correlations",
+                                        style={"height": "80vh", "overflow": "auto"}
+                                    )],
                                 )
                             ],
                             className="card-body-grow",
@@ -231,7 +235,10 @@ correlations_layout = html.Div(
                                 dcc.Loading(
                                     id="loading-correlation-graphs",
                                     type="circle",
-                                    children=[dcc.Graph(id="dd_output_container_correlation_graphs", style={"height": "80vh"})],
+                                    children=[dcc.Graph(
+                                        id="dd_output_container_correlation_graphs",
+                                        style={"height": "80vh"}  # already tall; keep it
+                                    )],
                                 )
                             ],
                             className="card-body-grow",

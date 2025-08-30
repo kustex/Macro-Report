@@ -2,14 +2,14 @@ html, body, #root, #_dash-app-content { height: 100%; }
 body { margin: 0; }
 
 /* Fixed left sidebar (your “tabs”) */
-/* .sidebar {
+.sidebar {
   position: fixed;
   top: 0; left: 0; bottom: 0;
   width: 16rem;
   padding: 1rem;
   background-color: #f8f9fa;
   overflow-y: auto;
-} */
+}
 
 /* Content area to the right that fills the screen */
 .content {
@@ -28,3 +28,25 @@ body { margin: 0; }
 @media (max-width: 991.98px) {
   .content { margin-left: 0; }
 }
+
+/* Center the selected value and placeholder in all dcc.Dropdown */
+.Select--single > .Select-control .Select-value,
+.Select-placeholder {
+  width: 100%;
+  text-align: center;
+}
+
+/* Center the text within the selected value label */
+.Select-value-label {
+  width: 100%;
+  text-align: center;
+  display: inline-block;
+}
+
+/* Center options in the open menu */
+.Select-menu-outer .Select-option {
+  text-align: center;
+}
+
+/* Slightly tighten vertical spacing around page headings */
+h2.text-center { margin-top: .25rem; margin-bottom: .5rem; }
