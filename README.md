@@ -29,21 +29,21 @@ Macro decisions live at the intersection of **trend**, **correlation**, and **co
 - Returns graph for the selected asset with lookbacks (1m–all).
 - Volume table vs. rolling averages (1W…3Y) and a volume chart with rolling curves.
 
-![Performance Screenshot](docs/screenshots/macro-report-performance.PNG)
+![Performance Screenshot](docs/images/macro-report-performance.PNG)
 
 ### 2) Correlations
 - Rolling Pearson correlations of the selected ticker vs. others at **15D, 30D, 90D, 120D, 180D**.
 - 1-year **30D high/low** markers for quick regime context.
 - Multi-panel correlation chart (recent window) to visualize stability/instability.
 
-![Correlations Screenshot](docs/screenshots/macro-report-correlations.PNG)
+![Correlations Screenshot](docs/images/macro-report-correlations.PNG)
 
 ### 3) Risk Metrics
 - Pulls FRED series like **2s10s**, **5Y breakevens**, **HY OAS**, **IG OAS**, **UST 3M/2Y/5Y/10Y/30Y**.
 - Table of changes vs. 1D/1W/1M/3M and distance to 52w extremes & long-run averages.
 - Single-series chart with selectable lookbacks.
 
-![Risk Metrics Screenshot](docs/screenshots/macro-report-risk-metrics.PNG)
+![Risk Metrics Screenshot](docs/images/macro-report-risk-metrics.PNG)
 
 ---
 
