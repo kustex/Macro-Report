@@ -1,6 +1,6 @@
 # Macro Report
 
-A fast, daily dashboard for macro markets — performance, cross-asset correlations, and rates/spreads — built with Dash + Plotly and backed by a lightweight SQLite store.
+A daily dashboard for macro markets — performance, cross-asset correlations, and rates/spreads — built with Dash + Plotly and backed by a lightweight SQLite store.
 
 ---
 
@@ -18,7 +18,7 @@ Data is persisted in a local SQLite database so the app stays snappy and resilie
 Macro decisions live at the intersection of **trend**, **correlation**, and **cost of capital**. This project aims to:
 - Give a **single place** to scan broad performance.
 - Show when **diversification breaks down** (rolling correlations by horizon).
-- Track **macro drivers** (rates, breakevens, credit spreads) without context-switching.
+- Track **macro drivers** (rates, breakevens, credit spreads).
 
 ---
 
@@ -102,18 +102,6 @@ Tweak IB pacing and connectivity without touching code (see `src/stock_data_serv
 - **Data layer**: `src/stock_data_service.py` fetches via `ib_insync`; FRED via `pandas_datareader`.
 - **Database**: `src/database_client.py` writes/reads OHLCV to **SQLite** (`data/macro_report.db`).
 - **Batch updates**: `data_fetcher.py` streams tickers through a paced async pipeline to respect IB limits.
-
----
-
-## Roadmap
-
-- Correlation **history chart per pair** across all horizons (15–180D) with hoverable regime markers.
-- Add **FX & crypto** coverage, with proper contract mapping for IB.
-- Export **CSV/PNG** from tables and charts.
-- **Caching**/memoization for heavy views; faster cold-starts.
-- **Tests** for calculations + data access; CI gates.
-- Optional **alerts** (email/Slack) for threshold breaches (e.g., corr > 0.8 / < -0.8, 52w extremes).
-- Add **Positioning** tab (CFTC) and **Volatility** tab (term-structure & surface snapshots).
 
 ---
 
