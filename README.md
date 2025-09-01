@@ -106,23 +106,7 @@ Tweak IB pacing and connectivity without touching code (see `src/stock_data_serv
 ---
 
 ## License
-
-Released under the **MIT License**. See `LICENSE` (or include the text below if not present).
-
-```
-MIT License
-
-Copyright (c) 2025 Macro Report contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-[...truncated for brevity; add full MIT text here or include a LICENSE file...]
-```
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
 ---
 
